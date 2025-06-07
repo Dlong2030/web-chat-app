@@ -5,6 +5,7 @@ import cors from "cors";
 import bodyParser from "body-parser";
 import morgan from "morgan";
 import { healthCheck } from './config/database';
+import { authRoutes } from './routes/auth.routes';
 
 const app = express();
 
@@ -22,6 +23,9 @@ app.use(bodyParser.json({ limit: "50mb" }));
 app.use(morgan('dev'));
 // app.use(morgan('combined'));
 // app.use(morgan('common'));
+
+// Routes
+app.use('/api/v1/auth', authRoutes);
 
 app.get('/', (req: Request, res: Response) => {
     res.send('Hello from Express + TypeScript!');

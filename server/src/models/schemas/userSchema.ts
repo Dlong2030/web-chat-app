@@ -1,5 +1,4 @@
-// src/models/schemas/userSchema.ts
-import { Schema, Document } from 'mongoose';
+import { Schema, Document, Types } from 'mongoose';
 
 // =============================================
 // SUBDOCUMENT INTERFACES
@@ -38,9 +37,11 @@ export interface IUserStickerPack {
 }
 
 export interface IUser extends Document {
+    _id: Types.ObjectId;
     email: string;
     username?: string;
     displayName: string;
+    password: string;
     avatarUrl?: string;
     phoneNumber?: string;
     bio?: string;
@@ -167,6 +168,12 @@ export const userSchema = new Schema<IUser>({
         required: true,
         maxlength: 100
     },
+    password: { // ← Thêm field này
+        type: String,
+        required: true,
+        minlength: 8,
+        select: false // Không select password by default để bảo mật
+    },
     avatarUrl: String,
     phoneNumber: {
         type: String,
@@ -228,6 +235,7 @@ userSchema.methods.toPublicJSON = function (this: IUser): Partial<IUser> {
     const user = this.toObject();
     delete user.authProviders;
     delete user.devices;
+    delete user.password;
     return user;
 };
 
