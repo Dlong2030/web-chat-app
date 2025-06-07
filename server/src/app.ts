@@ -4,6 +4,7 @@ dotenv.config();
 import cors from "cors";
 import bodyParser from "body-parser";
 import morgan from "morgan";
+import { healthCheck } from './config/database';
 
 const app = express();
 
@@ -16,14 +17,22 @@ app.use(
     })
 );
 app.use(express.json());
-app.use(express.urlencoded({ extended: true })); 
+app.use(express.urlencoded({ extended: true }));
 app.use(bodyParser.json({ limit: "50mb" }));
 app.use(morgan('dev'));
-// app.use(morgan('combined '));
+// app.use(morgan('combined'));
 // app.use(morgan('common'));
 
 app.get('/', (req: Request, res: Response) => {
     res.send('Hello from Express + TypeScript!');
 });
 
+app.get('/health', async (req, res) => {
+    try {
+        const result = await healthCheck();
+        res.json(result);
+    } catch (err) {
+        res.status(500).json({ status: 'unhealthy', error: (err as Error).message });
+    }
+});
 export default app;
