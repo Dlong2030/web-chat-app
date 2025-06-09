@@ -168,11 +168,11 @@ export const userSchema = new Schema<IUser>({
         required: true,
         maxlength: 100
     },
-    password: { // ← Thêm field này
+    password: { 
         type: String,
         required: true,
         minlength: 8,
-        select: false // Không select password by default để bảo mật
+        select: false
     },
     avatarUrl: String,
     phoneNumber: {
