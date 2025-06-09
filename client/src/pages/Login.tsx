@@ -1,4 +1,4 @@
-import React, { useState, ChangeEvent } from 'react';
+import React, { useState, ChangeEvent, useEffect } from 'react';
 import { User, Lock, Eye, EyeOff } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui/Button';
@@ -7,53 +7,73 @@ import { Checkbox } from '../components/ui/Checkbox';
 import { Card } from '../components/ui/Card';
 import { Logo } from '../components/ui/Logo';
 import { Link } from '../components/ui/Link';
+import { useAppDispatch, useAppSelector } from '../store';
+import { loginAsync, selectAuth, clearError } from '../store/slices/authSlices';
+import { LoginRequest } from '../types/auth.interfaces';
 
 // Interface definitions
 interface LoginFormData {
-    username: string;
+    email: string;
     password: string;
     rememberMe: boolean;
+    deviceToken?: string;
+    deviceType?: 'web' | 'mobile' | 'desktop';
+    deviceName?: string;
 }
 
 interface LoginFormErrors {
-    username?: string;
+    email?: string;
     password?: string;
-}
-
-interface LoginResponse {
-    success: boolean;
-    message?: string;
-    token?: string;
-    user?: {
-        id: string;
-        email: string;
-        name: string;
-    };
+    general?: string;
 }
 
 interface PandaChatLoginProps {
-    onLogin?: (data: LoginFormData) => Promise<LoginResponse> | LoginResponse;
     onSignup?: () => void;
     onForgotPassword?: () => void;
-    loading?: boolean;
 }
 
 const PandaChatLogin: React.FC<PandaChatLoginProps> = ({
-    onLogin,
     onSignup,
-    onForgotPassword,
-    loading = false
+    onForgotPassword
 }) => {
+    const dispatch = useAppDispatch();
+    const navigate = useNavigate();
+    const { isLoading, error, isAuthenticated } = useAppSelector(selectAuth);
+
     const [formData, setFormData] = useState<LoginFormData>({
-        username: '',
+        email: '',
         password: '',
-        rememberMe: false
+        rememberMe: false,
+        deviceType: 'web',
+        deviceName: navigator.userAgent || 'Unknown Device'
     });
 
     const [showPassword, setShowPassword] = useState<boolean>(false);
     const [errors, setErrors] = useState<LoginFormErrors>({});
-    const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
-    const navigate = useNavigate();
+
+    // Redirect if already authenticated
+    useEffect(() => {
+        if (isAuthenticated) {
+            navigate('/dashboard');
+        }
+    }, [isAuthenticated, navigate]);
+
+    // Clear Redux error when component unmounts
+    useEffect(() => {
+        return () => {
+            dispatch(clearError());
+        };
+    }, [dispatch]);
+
+    // Handle Redux error
+    useEffect(() => {
+        if (error) {
+            setErrors(prev => ({
+                ...prev,
+                general: error
+            }));
+        }
+    }, [error]);
 
     const handleInputChange = (e: ChangeEvent<HTMLInputElement>): void => {
         const { name, value, type, checked } = e.target;
@@ -63,24 +83,35 @@ const PandaChatLogin: React.FC<PandaChatLoginProps> = ({
             [name]: type === 'checkbox' ? checked : value
         }));
 
-        // Clear error when user starts typing
+        // Clear errors when user starts typing
         if (errors[name as keyof LoginFormErrors]) {
             setErrors(prev => ({
                 ...prev,
                 [name]: undefined
             }));
         }
+
+        // Clear general error when user interacts with form
+        if (errors.general) {
+            setErrors(prev => ({
+                ...prev,
+                general: undefined
+            }));
+            dispatch(clearError());
+        }
     };
 
     const validateForm = (): LoginFormErrors => {
         const newErrors: LoginFormErrors = {};
 
-        if (!formData.username.trim()) {
-            newErrors.username = 'Please Enter Your Username';
-        } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.username)) {
-            newErrors.username = 'Please enter a valid email address';
+        // Email validation
+        if (!formData.email.trim()) {
+            newErrors.email = 'Please enter your email';
+        } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+            newErrors.email = 'Please enter a valid email address';
         }
 
+        // Password validation
         if (!formData.password) {
             newErrors.password = 'Please enter your password';
         } else if (formData.password.length < 6) {
@@ -95,28 +126,45 @@ const PandaChatLogin: React.FC<PandaChatLoginProps> = ({
         setErrors(validationErrors);
 
         if (Object.keys(validationErrors).length === 0) {
-            setIsSubmitting(true);
+            // Prepare login request
+            const loginRequest: LoginRequest = {
+                email: formData.email.toLowerCase().trim(),
+                password: formData.password,
+                deviceType: formData.deviceType,
+                deviceName: formData.deviceName
+            };
 
-            try {
-                if (onLogin) {
-                    const result = await onLogin(formData);
-                    if (result.success) {
-                        console.log('Login successful:', result);
-                        // Handle successful login (redirect, store token, etc.)
-                    } else {
-                        console.error('Login failed:', result.message);
-                        // Handle login failure
+            // Get device token if available (for push notifications)
+            if ('serviceWorker' in navigator && 'PushManager' in window) {
+                try {
+                    // Request notification permission and get device token
+                    const permission = await Notification.requestPermission();
+                    if (permission === 'granted') {
+                        // Get FCM token here if using Firebase
+                        // loginRequest.deviceToken = await getDeviceToken();
                     }
-                } else {
-                    console.log('Login attempt:', formData);
-                    // Default behavior when no onLogin handler provided
+                } catch (error) {
+                    console.warn('Failed to get device token:', error);
                 }
-            } catch (error) {
-                console.error('Login error:', error);
-                // Handle login error
-            } finally {
-                setIsSubmitting(false);
             }
+
+            // Dispatch login action
+            const result = await dispatch(loginAsync(loginRequest));
+
+            if (loginAsync.fulfilled.match(result)) {
+                // Login successful - navigation will be handled by useEffect
+                console.log('Login successful');
+
+                // Save remember me preference
+                if (formData.rememberMe) {
+                    localStorage.setItem('rememberMe', 'true');
+                    localStorage.setItem('savedEmail', formData.email);
+                } else {
+                    localStorage.removeItem('rememberMe');
+                    localStorage.removeItem('savedEmail');
+                }
+            }
+            // Error handling is done by Redux and useEffect
         }
     };
 
@@ -125,59 +173,85 @@ const PandaChatLogin: React.FC<PandaChatLoginProps> = ({
     };
 
     const handleSignupClick = (): void => {
-        // if (onSignup) {
-        //     onSignup();
-        // } else {
-        //     console.log('Signup clicked');
-        // }
-        navigate('/register'); // Redirect to the signup page
+        if (onSignup) {
+            onSignup();
+        } else {
+            navigate('/register');
+        }
     };
 
     const handleForgotPasswordClick = (): void => {
         if (onForgotPassword) {
             onForgotPassword();
         } else {
-            console.log('Forgot password clicked');
+            navigate('/forgot-password');
         }
     };
 
-    const isFormDisabled = loading || isSubmitting;
+    // Load saved email on component mount
+    useEffect(() => {
+        const rememberMe = localStorage.getItem('rememberMe');
+        const savedEmail = localStorage.getItem('savedEmail');
+
+        if (rememberMe === 'true' && savedEmail) {
+            setFormData(prev => ({
+                ...prev,
+                email: savedEmail,
+                rememberMe: true
+            }));
+        }
+    }, []);
+
+    const isFormDisabled = isLoading;
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center p-4">
-            <div className="w-full max-w-md">
+        <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-orange-50 flex items-center justify-center p-3 sm:p-4 md:p-6 lg:p-8">
+            <div className="w-full max-w-sm sm:max-w-md lg:max-w-lg xl:max-w-xl">
                 {/* Logo and Header */}
-                <Logo
-                    title="PandaChat"
-                    subtitle="Sign in to continue to PandaChat."
-                />
+                <div className="mb-6 sm:mb-8">
+                    <Logo
+                        title="PandaChat"
+                        subtitle="Sign in to continue to PandaChat."
+                    />
+                </div>
 
                 {/* Login Form */}
-                <Card padding="lg">
-                    <div className="space-y-6">
-                        {/* Username Field */}
-                        <Input
-                            type="email"
-                            name="username"
-                            label="Username"
-                            placeholder="Enter email"
-                            value={formData.username}
-                            onChange={handleInputChange}
-                            icon={User}
-                            error={errors.username}
-                            disabled={isFormDisabled}
-                        />
+                <Card padding="lg" className="shadow-xl sm:shadow-2xl">
+                    <div className="space-y-4 sm:space-y-6">
+                        {/* General Error Message */}
+                        {errors.general && (
+                            <div className="bg-red-50 border border-red-200 rounded-lg p-3 sm:p-4">
+                                <p className="text-sm sm:text-base text-red-600">{errors.general}</p>
+                            </div>
+                        )}
+
+                        {/* Email Field */}
+                        <div>
+                            <Input
+                                type="email"
+                                name="email"
+                                label="Email"
+                                placeholder="Enter your email"
+                                value={formData.email}
+                                onChange={handleInputChange}
+                                icon={User}
+                                error={errors.email}
+                                disabled={isFormDisabled}
+                                autoComplete="email"
+                                className="text-sm sm:text-base"
+                            />
+                        </div>
 
                         {/* Password Field */}
                         <div>
                             <div className="flex items-center justify-between mb-2">
-                                <label className="block text-sm font-medium text-gray-700">
+                                <label className="block text-sm sm:text-base font-medium text-gray-700">
                                     Password
                                 </label>
                                 <Link
                                     variant="primary"
                                     onClick={handleForgotPasswordClick}
-                                    className="text-sm"
+                                    className="text-xs sm:text-sm text-purple-600 hover:text-purple-700 transition-colors"
                                 >
                                     Forgot password?
                                 </Link>
@@ -193,39 +267,45 @@ const PandaChatLogin: React.FC<PandaChatLoginProps> = ({
                                 onRightIconClick={handleTogglePassword}
                                 error={errors.password}
                                 disabled={isFormDisabled}
+                                autoComplete="current-password"
+                                className="text-sm sm:text-base"
                             />
                         </div>
 
                         {/* Remember Me Checkbox */}
-                        <Checkbox
-                            name="rememberMe"
-                            label="Remember me"
-                            checked={formData.rememberMe}
-                            onChange={handleInputChange}
-                            disabled={isFormDisabled}
-                        />
+                        <div className="flex items-center">
+                            <Checkbox
+                                name="rememberMe"
+                                label="Remember me"
+                                checked={formData.rememberMe}
+                                onChange={handleInputChange}
+                                disabled={isFormDisabled}
+                                className="text-sm sm:text-base"
+                            />
+                        </div>
 
                         {/* Submit Button */}
                         <Button
                             variant="primary"
                             size="lg"
-                            loading={isSubmitting}
+                            loading={isLoading}
                             disabled={isFormDisabled}
                             onClick={handleSubmit}
-                            className="w-full"
+                            className="w-full bg-gradient-to-r from-purple-400 to-pink-400 hover:from-purple-500 hover:to-pink-500 text-white border-none shadow-lg hover:shadow-xl transition-all duration-200 text-sm sm:text-base py-3 sm:py-4"
                         >
-                            Sign in
+                            {isLoading ? 'Signing in...' : 'Sign in'}
                         </Button>
                     </div>
                 </Card>
 
                 {/* Sign Up Link */}
-                <div className="mt-6 text-center">
-                    <p className="text-sm text-gray-600">
+                <div className="mt-4 sm:mt-6 text-center">
+                    <p className="text-sm sm:text-base text-gray-600">
                         Don't have an account?{' '}
                         <Link
                             variant="primary"
                             onClick={handleSignupClick}
+                            className="text-purple-600 hover:text-purple-700 font-medium transition-colors"
                         >
                             Signup now
                         </Link>
@@ -233,11 +313,11 @@ const PandaChatLogin: React.FC<PandaChatLoginProps> = ({
                 </div>
 
                 {/* Footer */}
-                <div className="mt-8 text-center">
-                    <p className="text-sm text-gray-500">
+                <div className="mt-6 sm:mt-8 text-center">
+                    <p className="text-xs sm:text-sm text-gray-500">
                         © 2025 PandaChat. Crafted with{' '}
-                        <span className="text-red-500">♥</span>{' '}
-                        by Themesbrand
+                        <span className="text-pink-500">♥</span>{' '}
+                        by Dinh Long
                     </p>
                 </div>
             </div>
