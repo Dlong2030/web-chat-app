@@ -1,47 +1,79 @@
-import { Request, Response, NextFunction, RequestHandler } from 'express';
-import { verifyToken } from '../utils/auth.utils';
+import { Request, Response, NextFunction } from 'express';
+import { AuthService } from '../services/auth.service';
+import { User } from '../models';
 
-declare global {
-    namespace Express {
-        interface Request {
-            userId?: string;
-        }
-    }
-}
-
-export const authenticateToken: RequestHandler = (req: Request, res: Response, next: NextFunction): void => {
-    const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1];
-
-    if (!token) {
-        res.status(401).json({
-            success: false,
-            message: 'Access token required',
-            error: 'No token provided'
-        });
-        return;
-    }
-
+/**
+ * Middleware để xác thực JWT token
+ */
+export const authenticateToken = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+): Promise<void> => {
     try {
-        const decoded = verifyToken(token, process.env.JWT_SECRET!);
+        let token = req.headers.authorization?.replace('Bearer ', '');
+        if (!token) token = req.cookies?.accessToken;
 
-        if (decoded.type !== 'access') {
-            res.status(403).json({
+        if (!token) {
+            res.status(401).json({
                 success: false,
-                message: 'Invalid token type',
-                error: 'Token is not an access token'
+                message: 'Access token is required'
             });
             return;
         }
 
-        req.userId = decoded.userId;
+        const decoded = AuthService.verifyToken(token);
+        const user = await User.findById(decoded.userId);
+
+        if (!user || !user.isActive) {
+            res.status(401).json({
+                success: false,
+                message: 'User not found or inactive'
+            });
+            return;
+        }
+
+        (req as any).user = user;
+        (req as any).userId = decoded.userId;
+
         next();
-    } catch (error) {
-        res.status(403).json({
+    } catch (error: any) {
+        res.status(401).json({
             success: false,
             message: 'Invalid or expired token',
-            error: 'Token verification failed'
+            error: error.message
         });
         return;
+    }
+};
+
+/**
+ * Middleware tùy chọn - không bắt buộc phải có token
+ */
+export const optionalAuth = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+): Promise<void> => {
+    try {
+        let token = req.headers.authorization?.replace('Bearer ', '');
+        if (!token) token = req.cookies?.accessToken;
+
+        if (token) {
+            try {
+                const decoded = AuthService.verifyToken(token);
+                const user = await User.findById(decoded.userId);
+                if (user && user.isActive) {
+                    (req as any).user = user;
+                    (req as any).userId = decoded.userId;
+                }
+            } catch (error) {
+                console.log('Invalid token in optional auth:', error);
+            }
+        }
+
+        next();
+    } catch (error) {
+        next();
     }
 };

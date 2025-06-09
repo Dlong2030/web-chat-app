@@ -17,4 +17,13 @@ router.post('/refresh', refreshTokenValidation, AuthController.refreshToken);
 // Logout route
 router.post('/logout', authenticateToken, AuthController.logout);
 
+// Get user profile route
+router.get('/me', authenticateToken, AuthController.getCurrentUser);
+
+// OAuth routes
+router.get('/google', AuthController.initiateGoogleAuth);
+router.get('/google/callback', AuthController.handleGoogleCallback);
+router.get('/facebook', AuthController.initiateFacebookAuth);
+router.get('/facebook/callback', AuthController.handleFacebookCallback);
+
 export { router as authRoutes };
