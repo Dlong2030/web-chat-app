@@ -1,11 +1,8 @@
-import { Schema, Document } from 'mongoose';
+import { Schema, Document, Types } from 'mongoose';
 
-// =============================================
 // INTERFACE
-// =============================================
-
 export interface INotification extends Document {
-    userId: Schema.Types.ObjectId;
+    userId: Types.ObjectId;
     type: 'message' | 'friend_request' | 'mention' | 'group_invite' | 'system';
     title: string;
     content?: string;
@@ -18,10 +15,7 @@ export interface INotification extends Document {
     markAsRead(): Promise<INotification>;
 }
 
-// =============================================
 // NOTIFICATION SCHEMA
-// =============================================
-
 export const notificationSchema = new Schema<INotification>({
     userId: {
         type: Schema.Types.ObjectId,
@@ -52,18 +46,12 @@ export const notificationSchema = new Schema<INotification>({
     timestamps: { createdAt: true, updatedAt: false }
 });
 
-// =============================================
 // INDEXES
-// =============================================
-
 notificationSchema.index({ userId: 1, createdAt: -1 });
 notificationSchema.index({ userId: 1, isRead: 1 });
 notificationSchema.index({ type: 1 });
 
-// =============================================
 // METHODS
-// =============================================
-
 notificationSchema.methods.markAsRead = function (this: INotification): Promise<INotification> {
     this.isRead = true;
     this.readAt = new Date();

@@ -1,9 +1,6 @@
 import { Schema, Document } from 'mongoose';
 
-// =============================================
-// SUBDOCUMENT INTERFACES
-// =============================================
-
+// Interfaces
 export interface ISticker {
     name: string;
     imageUrl: string;
@@ -19,10 +16,7 @@ export interface IStickerPack extends Document {
     createdAt: Date;
 }
 
-// =============================================
 // SUBDOCUMENT SCHEMAS
-// =============================================
-
 const stickerSchema = new Schema<ISticker>({
     name: {
         type: String,
@@ -36,10 +30,7 @@ const stickerSchema = new Schema<ISticker>({
     tags: [String]
 }, { _id: false });
 
-// =============================================
 // MAIN STICKER PACK SCHEMA
-// =============================================
-
 export const stickerPackSchema = new Schema<IStickerPack>({
     name: {
         type: String,
@@ -66,9 +57,6 @@ export const stickerPackSchema = new Schema<IStickerPack>({
     timestamps: { createdAt: true, updatedAt: false }
 });
 
-// =============================================
 // INDEXES
-// =============================================
-
 stickerPackSchema.index({ name: 1 });
 stickerPackSchema.index({ 'stickers.tags': 1 });

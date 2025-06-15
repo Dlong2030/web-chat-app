@@ -24,7 +24,7 @@ export class AuthService {
     private static readonly JWT_SECRET = process.env.JWT_SECRET || 'pandaappchat';
     private static readonly JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'pandaappchatrefresh';
     private static readonly JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
-    private static readonly REFRESH_TOKEN_EXPIRES_IN = process.env.REFRESH_TOKEN_EXPIRES_IN || '30d';
+    private static readonly JWT_REFRESH_EXPIRES_IN = process.env.JWT_REFRESH_EXPIRES_IN || '30d';
 
     /**
      * Tạo JWT tokens cho người dùng
@@ -35,7 +35,7 @@ export class AuthService {
         };
 
         const refreshSignOptions: SignOptions = {
-            expiresIn: this.REFRESH_TOKEN_EXPIRES_IN as jwt.SignOptions['expiresIn']
+            expiresIn: this.JWT_REFRESH_EXPIRES_IN as jwt.SignOptions['expiresIn']
         };
 
         const accessToken = jwt.sign(
@@ -424,5 +424,16 @@ export class AuthService {
         } catch (error) {
             throw new AppError('Invalid token', 401, 'INVALID_TOKEN');
         }
+    }
+
+    static async getUserFromToken(token: string): Promise<IUser> {
+        const decoded = this.verifyToken(token);
+        const user = await User.findById(decoded.userId).select('-password');
+
+        if (!user || !user.isActive) {
+            throw new AppError('Invalid token', 401, 'INVALID_TOKEN');
+        }
+
+        return user;
     }
 }

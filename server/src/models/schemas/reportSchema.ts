@@ -1,9 +1,6 @@
-import { Schema, Document } from 'mongoose';
+import { Schema, Document, Types } from 'mongoose';
 
-// =============================================
-// SUBDOCUMENT INTERFACES
-// =============================================
-
+// Interfaces
 export interface IEvidence {
     type?: string;
     url?: string;
@@ -11,37 +8,31 @@ export interface IEvidence {
 }
 
 export interface IReport extends Document {
-    reporterId: Schema.Types.ObjectId;
-    reportedUserId?: Schema.Types.ObjectId;
-    reportedMessageId?: Schema.Types.ObjectId;
-    reportedConversationId?: Schema.Types.ObjectId;
+    reporterId: Types.ObjectId;
+    reportedUserId?: Types.ObjectId;
+    reportedMessageId?: Types.ObjectId;
+    reportedConversationId?: Types.ObjectId;
     reason: string;
     description?: string;
     status: 'pending' | 'resolved' | 'dismissed';
     evidence: IEvidence[];
     resolvedAt?: Date;
-    resolvedBy?: Schema.Types.ObjectId;
+    resolvedBy?: Types.ObjectId;
     createdAt: Date;
 
     // Methods
-    resolve(resolvedBy: Schema.Types.ObjectId): Promise<IReport>;
-    dismiss(resolvedBy: Schema.Types.ObjectId): Promise<IReport>;
+    resolve(resolvedBy: Types.ObjectId): Promise<IReport>;
+    dismiss(resolvedBy: Types.ObjectId): Promise<IReport>;
 }
 
-// =============================================
 // SUBDOCUMENT SCHEMAS
-// =============================================
-
 const evidenceSchema = new Schema<IEvidence>({
     type: String,
     url: String,
     description: String
 }, { _id: false });
 
-// =============================================
 // MAIN REPORT SCHEMA
-// =============================================
-
 export const reportSchema = new Schema<IReport>({
     reporterId: {
         type: Schema.Types.ObjectId,
@@ -74,33 +65,27 @@ export const reportSchema = new Schema<IReport>({
     evidence: [evidenceSchema],
     resolvedAt: Date,
     resolvedBy: {
-        type: Schema.Types.ObjectId,
+        type: Types.ObjectId,
         ref: 'User'
     }
 }, {
     timestamps: { createdAt: true, updatedAt: false }
 });
 
-// =============================================
 // INDEXES
-// =============================================
-
 reportSchema.index({ reporterId: 1 });
 reportSchema.index({ status: 1 });
 reportSchema.index({ createdAt: -1 });
 
-// =============================================
 // METHODS
-// =============================================
-
-reportSchema.methods.resolve = function (this: IReport, resolvedBy: Schema.Types.ObjectId): Promise<IReport> {
+reportSchema.methods.resolve = function (this: IReport, resolvedBy: Types.ObjectId): Promise<IReport> {
     this.status = 'resolved';
     this.resolvedAt = new Date();
     this.resolvedBy = resolvedBy;
     return this.save();
 };
 
-reportSchema.methods.dismiss = function (this: IReport, resolvedBy: Schema.Types.ObjectId): Promise<IReport> {
+reportSchema.methods.dismiss = function (this: IReport, resolvedBy: Types.ObjectId): Promise<IReport> {
     this.status = 'dismissed';
     this.resolvedAt = new Date();
     this.resolvedBy = resolvedBy;

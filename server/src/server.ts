@@ -2,6 +2,8 @@ import app from './app';
 import http from 'http';
 import { connectDB } from './config/database';
 import logger from './utils/logger';
+import { initializeSocket } from './socket';
+import { seedDefaultData } from './models';
 
 const PORT = process.env.SERVER_PORT || 5000;
 // Start the server
@@ -10,6 +12,10 @@ const startServer = async () => {
         await connectDB(); // Kết nối MongoDB
 
         const server = http.createServer(app);
+
+        await seedDefaultData();
+
+        initializeSocket(server);
 
         server.listen(PORT, () => {
             logger.info(`Server listening on http://localhost:${PORT}`);

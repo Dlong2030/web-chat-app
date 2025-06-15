@@ -10,6 +10,7 @@ import { Link } from '../components/ui/Link';
 import { useAppDispatch, useAppSelector } from '../store';
 import { loginAsync, selectAuth, clearError } from '../store/slices/authSlices';
 import { LoginRequest } from '../types/auth.interfaces';
+import { GoogleIcon, FacebookIcon, GitHubIcon } from '../components/icons/SocialIcons';
 
 // Interface definitions
 interface LoginFormData {
@@ -188,6 +189,52 @@ const PandaChatLogin: React.FC<PandaChatLoginProps> = ({
         }
     };
 
+    // Social Login Handlers
+    const handleGoogleLogin = async (): Promise<void> => {
+        try {
+            // Implement Google OAuth login
+            console.log('Google login clicked');
+            // window.location.href = '/auth/google';
+            // Or use Google OAuth SDK
+        } catch (error) {
+            console.error('Google login error:', error);
+            setErrors(prev => ({
+                ...prev,
+                general: 'Failed to login with Google. Please try again.'
+            }));
+        }
+    };
+
+    const handleFacebookLogin = async (): Promise<void> => {
+        try {
+            // Implement Facebook OAuth login
+            console.log('Facebook login clicked');
+            // window.location.href = '/auth/facebook';
+            // Or use Facebook SDK
+        } catch (error) {
+            console.error('Facebook login error:', error);
+            setErrors(prev => ({
+                ...prev,
+                general: 'Failed to login with Facebook. Please try again.'
+            }));
+        }
+    };
+
+    const handleGitHubLogin = async (): Promise<void> => {
+        try {
+            // Implement GitHub OAuth login
+            console.log('GitHub login clicked');
+            // window.location.href = '/auth/github';
+            // Or use GitHub OAuth
+        } catch (error) {
+            console.error('GitHub login error:', error);
+            setErrors(prev => ({
+                ...prev,
+                general: 'Failed to login with GitHub. Please try again.'
+            }));
+        }
+    };
+
     // Load saved email on component mount
     useEffect(() => {
         const rememberMe = localStorage.getItem('rememberMe');
@@ -210,8 +257,10 @@ const PandaChatLogin: React.FC<PandaChatLoginProps> = ({
                 {/* Logo and Header */}
                 <div className="mb-6 sm:mb-8">
                     <Logo
-                        title="PandaChat"
-                        subtitle="Sign in to continue to PandaChat."
+                        title=""
+                        size="lg"
+                        imageUrl="https://res.cloudinary.com/dnmp06kjg/image/upload/v1749984178/snapedit_1749984160484_ifftci.png"
+                        imageAlt="My App Logo"
                     />
                 </div>
 
@@ -224,6 +273,52 @@ const PandaChatLogin: React.FC<PandaChatLoginProps> = ({
                                 <p className="text-sm sm:text-base text-red-600">{errors.general}</p>
                             </div>
                         )}
+
+                        {/* Social Login Buttons */}
+                        <div className="space-y-3">
+                            <div className="text-center">
+                                <p className="text-sm text-gray-600 mb-4">Sign in with</p>
+                            </div>
+
+                            <div className="grid grid-cols-3 gap-3">
+                                {/* Google Login */}
+                                <button
+                                    onClick={handleGoogleLogin}
+                                    disabled={isFormDisabled}
+                                    className="flex items-center justify-center px-4 py-3 border border-gray-300 rounded-lg bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-purple-200 focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    <GoogleIcon />
+                                </button>
+
+                                {/* Facebook Login */}
+                                <button
+                                    onClick={handleFacebookLogin}
+                                    disabled={isFormDisabled}
+                                    className="flex items-center justify-center px-4 py-3 border border-gray-300 rounded-lg bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-purple-200 focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    <FacebookIcon />
+                                </button>
+
+                                {/* GitHub Login */}
+                                <button
+                                    onClick={handleGitHubLogin}
+                                    disabled={isFormDisabled}
+                                    className="flex items-center justify-center px-4 py-3 border border-gray-300 rounded-lg bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-purple-200 focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-gray-700"
+                                >
+                                    <GitHubIcon />
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Divider */}
+                        <div className="relative">
+                            <div className="absolute inset-0 flex items-center">
+                                <div className="w-full border-t border-gray-300" />
+                            </div>
+                            <div className="relative flex justify-center text-sm">
+                                <span className="px-2 bg-white text-gray-500">Or continue with</span>
+                            </div>
+                        </div>
 
                         {/* Email Field */}
                         <div>
