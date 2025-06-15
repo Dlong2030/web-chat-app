@@ -1,7 +1,5 @@
-// src/models/index.ts
 import mongoose from 'mongoose';
 
-// Import schemas
 import { userSchema, IUser } from './schemas/userSchema';
 import { friendshipSchema, IFriendship } from './schemas/friendshipSchema';
 import { conversationSchema, IConversation } from './schemas/conversationSchema';
@@ -11,10 +9,7 @@ import { stickerPackSchema, IStickerPack } from './schemas/stickerPackSchema';
 import { searchHistorySchema, ISearchHistory } from './schemas/searchHistorySchema';
 import { reportSchema, IReport } from './schemas/reportSchema';
 
-// =============================================
 // CREATE MODELS
-// =============================================
-
 export const User = mongoose.model<IUser>('User', userSchema);
 export const Friendship = mongoose.model<IFriendship>('Friendship', friendshipSchema);
 export const Conversation = mongoose.model<IConversation>('Conversation', conversationSchema);
@@ -24,10 +19,7 @@ export const StickerPack = mongoose.model<IStickerPack>('StickerPack', stickerPa
 export const SearchHistory = mongoose.model<ISearchHistory>('SearchHistory', searchHistorySchema);
 export const Report = mongoose.model<IReport>('Report', reportSchema);
 
-// =============================================
 // EXPORT INTERFACES
-// =============================================
-
 export type {
     IUser,
     IFriendship,
@@ -70,9 +62,7 @@ export type {
     IEvidence
 } from './schemas/reportSchema';
 
-// =============================================
 // UTILITY FUNCTIONS
-// =============================================
 
 // Seed default data
 export const seedDefaultData = async (): Promise<void> => {

@@ -1,11 +1,8 @@
 import { Schema, Document, Types } from 'mongoose';
 
-// =============================================
-// SUBDOCUMENT INTERFACES
-// =============================================
-
+// Interfaces
 export interface IParticipant {
-    userId: Schema.Types.ObjectId;
+    userId: Types.ObjectId;
     role: 'admin' | 'moderator' | 'member';
     joinedAt: Date;
     leftAt?: Date;
@@ -17,9 +14,9 @@ export interface IParticipant {
 }
 
 export interface ILastMessage {
-    messageId?: Schema.Types.ObjectId;
+    messageId?: Types.ObjectId;
     content?: string;
-    senderId?: Schema.Types.ObjectId;
+    senderId?: Types.ObjectId;
     type?: string;
     createdAt?: Date;
 }
@@ -35,7 +32,7 @@ export interface IConversation extends Document {
     name?: string;
     description?: string;
     avatarUrl?: string;
-    createdBy?: Schema.Types.ObjectId;
+    createdBy?: Types.ObjectId;
     isActive: boolean;
     lastMessageAt?: Date;
     lastMessage?: ILastMessage;
@@ -45,15 +42,12 @@ export interface IConversation extends Document {
     updatedAt: Date;
 
     // Methods
-    addParticipant(userId: Schema.Types.ObjectId, role?: 'admin' | 'moderator' | 'member'): Promise<IConversation>;
-    removeParticipant(userId: Schema.Types.ObjectId): Promise<IConversation>;
+    addParticipant(userId: Types.ObjectId, role?: 'admin' | 'moderator' | 'member'): Promise<IConversation>;
+    removeParticipant(userId: Types.ObjectId): Promise<IConversation>;
     updateLastMessage(message: any): Promise<IConversation>;
 }
 
-// =============================================
-// SUBDOCUMENT SCHEMAS
-// =============================================
-
+// Schema 
 const participantSchema = new Schema<IParticipant>({
     userId: {
         type: Schema.Types.ObjectId,
@@ -91,12 +85,12 @@ const participantSchema = new Schema<IParticipant>({
 
 const lastMessageSchema = new Schema<ILastMessage>({
     messageId: {
-        type: Schema.Types.ObjectId,
+        type: Types.ObjectId,
         ref: 'Message'
     },
     content: String,
     senderId: {
-        type: Schema.Types.ObjectId,
+        type: Types.ObjectId,
         ref: 'User'
     },
     type: String,
@@ -118,10 +112,7 @@ const conversationSettingsSchema = new Schema<IConversationSettings>({
     }
 }, { _id: false });
 
-// =============================================
 // MAIN CONVERSATION SCHEMA
-// =============================================
-
 export const conversationSchema = new Schema<IConversation>({
     type: {
         type: String,
@@ -135,7 +126,7 @@ export const conversationSchema = new Schema<IConversation>({
     description: String,
     avatarUrl: String,
     createdBy: {
-        type: Schema.Types.ObjectId,
+        type: Types.ObjectId,
         ref: 'User'
     },
     isActive: {
@@ -162,22 +153,16 @@ export const conversationSchema = new Schema<IConversation>({
     timestamps: true
 });
 
-// =============================================
 // INDEXES
-// =============================================
-
 conversationSchema.index({ 'participants.userId': 1 });
 conversationSchema.index({ type: 1 });
 conversationSchema.index({ lastMessageAt: -1 });
 conversationSchema.index({ 'participants.userId': 1, lastMessageAt: -1 });
 
-// =============================================
 // METHODS
-// =============================================
-
 conversationSchema.methods.addParticipant = function (
     this: IConversation,
-    userId: Schema.Types.ObjectId,
+    userId: Types.ObjectId,
     role: 'admin' | 'moderator' | 'member' = 'member'
 ): Promise<IConversation> {
     const existingParticipant = this.participants.find(p =>
@@ -201,7 +186,7 @@ conversationSchema.methods.addParticipant = function (
 
 conversationSchema.methods.removeParticipant = function (
     this: IConversation,
-    userId: Schema.Types.ObjectId
+    userId: Types.ObjectId
 ): Promise<IConversation> {
     const participant = this.participants.find(p =>
         p.userId.toString() === userId.toString()

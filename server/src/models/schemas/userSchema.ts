@@ -1,9 +1,6 @@
 import { Schema, Document, Types } from 'mongoose';
 
-// =============================================
-// SUBDOCUMENT INTERFACES
-// =============================================
-
+// Interfaces
 export interface IAuthProvider {
     provider: 'google' | 'facebook' | 'github';
     providerId: string;
@@ -32,7 +29,7 @@ export interface INotificationSettings {
 }
 
 export interface IUserStickerPack {
-    packId: Schema.Types.ObjectId;
+    packId: Types.ObjectId;
     purchasedAt: Date;
 }
 
@@ -64,10 +61,8 @@ export interface IUser extends Document {
     addDevice(deviceData: Partial<IDevice>): Promise<IUser>;
 }
 
-// =============================================
-// SUBDOCUMENT SCHEMAS
-// =============================================
 
+// SUBDOCUMENT SCHEMAS
 const authProviderSchema = new Schema<IAuthProvider>({
     provider: {
         type: String,
@@ -145,10 +140,7 @@ const userStickerPackSchema = new Schema<IUserStickerPack>({
     }
 }, { _id: false });
 
-// =============================================
 // MAIN USER SCHEMA
-// =============================================
-
 export const userSchema = new Schema<IUser>({
     email: {
         type: String,
@@ -217,20 +209,14 @@ export const userSchema = new Schema<IUser>({
     toObject: { virtuals: true }
 });
 
-// =============================================
 // INDEXES
-// =============================================
-
 userSchema.index({ email: 1 });
 userSchema.index({ username: 1 });
 userSchema.index({ status: 1 });
 userSchema.index({ lastSeen: -1 });
 userSchema.index({ 'authProviders.provider': 1, 'authProviders.providerId': 1 });
 
-// =============================================
 // METHODS
-// =============================================
-
 userSchema.methods.toPublicJSON = function (this: IUser): Partial<IUser> {
     const user = this.toObject();
     delete user.authProviders;

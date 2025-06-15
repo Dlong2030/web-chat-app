@@ -149,8 +149,10 @@ const PandaChatRegister: React.FC<PandaChatRegisterProps> = ({
                 {/* Logo and Header */}
                 <div className="mb-6 sm:mb-8">
                     <Logo
-                        title="PandaChat"
-                        subtitle="Get your PandaChat account now."
+                        title=""
+                        size="lg"
+                        imageUrl="https://res.cloudinary.com/dnmp06kjg/image/upload/v1749984178/snapedit_1749984160484_ifftci.png"
+                        imageAlt="My App Logo"
                     />
                 </div>
 

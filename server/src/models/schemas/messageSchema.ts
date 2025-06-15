@@ -1,42 +1,41 @@
-import { Schema, Document } from 'mongoose';
+import { Schema, Document, Types } from 'mongoose';
 
-// =============================================
-// SUBDOCUMENT INTERFACES
-// =============================================
-
+// Interfaces
 export interface IAttachment {
     fileName: string;
     fileUrl: string;
     fileType?: string;
     fileSize?: number;
     thumbnailUrl?: string;
-    duration?: number; // for audio/video
-    width?: number;    // for images/videos
-    height?: number;   // for images/videos
+    duration?: number;
+    width?: number;
+    height?: number;
+    publicId?: string;
+    resourceType?: 'image' | 'video' | 'raw';
 }
 
 export interface IReaction {
-    userId: Schema.Types.ObjectId;
+    userId: Types.ObjectId;
     type: 'like' | 'love' | 'haha' | 'wow' | 'sad' | 'angry' | 'care';
     createdAt: Date;
 }
 
 export interface IReadBy {
-    userId: Schema.Types.ObjectId;
+    userId: Types.ObjectId;
     readAt: Date;
 }
 
 export interface IReplyTo {
-    messageId: Schema.Types.ObjectId;
+    messageId: Types.ObjectId;
     content?: string;
-    senderId?: Schema.Types.ObjectId;
+    senderId?: Types.ObjectId;
     type?: string;
 }
 
 export interface IForwardedFrom {
-    messageId: Schema.Types.ObjectId;
-    originalSenderId?: Schema.Types.ObjectId;
-    originalConversationId?: Schema.Types.ObjectId;
+    messageId: Types.ObjectId;
+    originalSenderId?: Types.ObjectId;
+    originalConversationId?: Types.ObjectId;
 }
 
 export interface IEditHistory {
@@ -45,8 +44,8 @@ export interface IEditHistory {
 }
 
 export interface IMessage extends Document {
-    conversationId: Schema.Types.ObjectId;
-    senderId: Schema.Types.ObjectId;
+    conversationId: Types.ObjectId;
+    senderId: Types.ObjectId;
     content?: string;
     type: 'text' | 'image' | 'voice' | 'video' | 'file' | 'sticker' | 'location' | 'system';
     replyTo?: IReplyTo;
@@ -54,27 +53,24 @@ export interface IMessage extends Document {
     attachments: IAttachment[];
     reactions: IReaction[];
     readBy: IReadBy[];
-    mentions: Schema.Types.ObjectId[];
+    mentions: Types.ObjectId[];
     isEdited: boolean;
     editedAt?: Date;
     editHistory: IEditHistory[];
     isDeleted: boolean;
     deletedAt?: Date;
-    deletedBy?: Schema.Types.ObjectId;
+    deletedBy?: Types.ObjectId;
     createdAt: Date;
     updatedAt: Date;
 
     // Methods
-    addReaction(userId: Schema.Types.ObjectId, reactionType: string): Promise<IMessage>;
-    removeReaction(userId: Schema.Types.ObjectId): Promise<IMessage>;
-    markAsRead(userId: Schema.Types.ObjectId): Promise<IMessage>;
+    addReaction(userId: Types.ObjectId, reactionType: string): Promise<IMessage>;
+    removeReaction(userId: Types.ObjectId): Promise<IMessage>;
+    markAsRead(userId: Types.ObjectId): Promise<IMessage>;
     editContent(newContent: string): Promise<IMessage>;
 }
 
-// =============================================
-// SUBDOCUMENT SCHEMAS
-// =============================================
-
+// Schema
 const attachmentSchema = new Schema<IAttachment>({
     fileName: {
         type: String,
@@ -87,9 +83,9 @@ const attachmentSchema = new Schema<IAttachment>({
     fileType: String,
     fileSize: Number,
     thumbnailUrl: String,
-    duration: Number, // for audio/video
-    width: Number,    // for images/videos
-    height: Number    // for images/videos
+    duration: Number,
+    width: Number,
+    height: Number
 }, { _id: false });
 
 const reactionSchema = new Schema<IReaction>({
@@ -159,10 +155,7 @@ const editHistorySchema = new Schema<IEditHistory>({
     }
 }, { _id: false });
 
-// =============================================
 // MAIN MESSAGE SCHEMA
-// =============================================
-
 export const messageSchema = new Schema<IMessage>({
     conversationId: {
         type: Schema.Types.ObjectId,
@@ -187,7 +180,7 @@ export const messageSchema = new Schema<IMessage>({
     reactions: [reactionSchema],
     readBy: [readBySchema],
     mentions: [{
-        type: Schema.Types.ObjectId,
+        type: Types.ObjectId,
         ref: 'User'
     }],
     isEdited: {
@@ -202,17 +195,14 @@ export const messageSchema = new Schema<IMessage>({
     },
     deletedAt: Date,
     deletedBy: {
-        type: Schema.Types.ObjectId,
+        type: Types.ObjectId,
         ref: 'User'
     }
 }, {
     timestamps: true
 });
 
-// =============================================
 // INDEXES
-// =============================================
-
 messageSchema.index({ conversationId: 1, createdAt: -1 });
 messageSchema.index({ senderId: 1 });
 messageSchema.index({ type: 1 });
@@ -221,13 +211,10 @@ messageSchema.index({ conversationId: 1, isDeleted: 1, createdAt: -1 });
 messageSchema.index({ mentions: 1 });
 messageSchema.index({ content: 'text', 'attachments.fileName': 'text' });
 
-// =============================================
 // METHODS
-// =============================================
-
 messageSchema.methods.addReaction = function (
     this: IMessage,
-    userId: Schema.Types.ObjectId,
+    userId: Types.ObjectId,
     reactionType: string
 ): Promise<IMessage> {
     // Remove existing reaction from this user
@@ -245,7 +232,7 @@ messageSchema.methods.addReaction = function (
 
 messageSchema.methods.removeReaction = function (
     this: IMessage,
-    userId: Schema.Types.ObjectId
+    userId: Types.ObjectId
 ): Promise<IMessage> {
     this.reactions = this.reactions.filter(r =>
         r.userId.toString() !== userId.toString()
@@ -255,7 +242,7 @@ messageSchema.methods.removeReaction = function (
 
 messageSchema.methods.markAsRead = function (
     this: IMessage,
-    userId: Schema.Types.ObjectId
+    userId: Types.ObjectId
 ): Promise<IMessage> {
     const existingRead = this.readBy.find(r =>
         r.userId.toString() === userId.toString()
@@ -285,5 +272,15 @@ messageSchema.methods.editContent = function (
     this.content = newContent;
     this.isEdited = true;
     this.editedAt = new Date();
+    return this.save();
+};
+
+messageSchema.methods.softDelete = function (
+    this: IMessage,
+    deletedBy: Types.ObjectId
+): Promise<IMessage> {
+    this.isDeleted = true;
+    this.deletedAt = new Date();
+    this.deletedBy = deletedBy;
     return this.save();
 };

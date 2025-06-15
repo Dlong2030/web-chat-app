@@ -1,21 +1,15 @@
-import { Schema, Document } from 'mongoose';
+import { Schema, Document, Types } from 'mongoose';
 
-// =============================================
 // INTERFACE
-// =============================================
-
 export interface ISearchHistory extends Document {
-    userId: Schema.Types.ObjectId;
+    userId: Types.ObjectId;
     query: string;
     searchType: 'message' | 'user' | 'conversation';
-    results: Schema.Types.ObjectId[];
+    results: Types.ObjectId[];
     createdAt: Date;
 }
 
-// =============================================
 // SEARCH HISTORY SCHEMA
-// =============================================
-
 export const searchHistorySchema = new Schema<ISearchHistory>({
     userId: {
         type: Schema.Types.ObjectId,
@@ -32,7 +26,7 @@ export const searchHistorySchema = new Schema<ISearchHistory>({
         default: 'message'
     },
     results: [{
-        type: Schema.Types.ObjectId,
+        type: Types.ObjectId,
         refPath: function (this: ISearchHistory) {
             if (this.searchType === 'user') return 'User';
             if (this.searchType === 'conversation') return 'Conversation';
@@ -43,9 +37,6 @@ export const searchHistorySchema = new Schema<ISearchHistory>({
     timestamps: { createdAt: true, updatedAt: false }
 });
 
-// =============================================
 // INDEXES
-// =============================================
-
 searchHistorySchema.index({ userId: 1, createdAt: -1 });
 searchHistorySchema.index({ query: 1 });
