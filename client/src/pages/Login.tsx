@@ -8,7 +8,14 @@ import { Card } from '../components/ui/Card';
 import { Logo } from '../components/ui/Logo';
 import { Link } from '../components/ui/Link';
 import { useAppDispatch, useAppSelector } from '../store';
-import { loginAsync, selectAuth, clearError } from '../store/slices/authSlices';
+import {
+    loginAsync,
+    selectAuth,
+    clearError,
+    loginWithGoogleAsync,
+    loginWithFacebookAsync,
+    selectOAuthLoading
+} from '../store/slices/authSlices';
 import { LoginRequest } from '../types/auth.interfaces';
 import { GoogleIcon, FacebookIcon, GitHubIcon } from '../components/icons/SocialIcons';
 
@@ -40,6 +47,7 @@ const PandaChatLogin: React.FC<PandaChatLoginProps> = ({
     const dispatch = useAppDispatch();
     const navigate = useNavigate();
     const { isLoading, error, isAuthenticated } = useAppSelector(selectAuth);
+    const oauthLoading = useAppSelector(selectOAuthLoading);
 
     const [formData, setFormData] = useState<LoginFormData>({
         email: '',
@@ -189,13 +197,32 @@ const PandaChatLogin: React.FC<PandaChatLoginProps> = ({
         }
     };
 
-    // Social Login Handlers
+    // Xử lý OAuth message từ popup
+    useEffect(() => {
+        const handleMessage = (event: MessageEvent) => {
+            if (event.origin !== window.location.origin) return;
+
+            if (event.data.type === 'OAUTH_SUCCESS') {
+                navigate('/');
+            } else if (event.data.type === 'OAUTH_ERROR') {
+                setErrors(prev => ({
+                    ...prev,
+                    general: event.data.error || 'OAuth authentication failed'
+                }));
+            }
+        };
+
+        window.addEventListener('message', handleMessage);
+        return () => window.removeEventListener('message', handleMessage);
+    }, [navigate]);
+
+    // Cập nhật các hàm xử lý OAuth
     const handleGoogleLogin = async (): Promise<void> => {
         try {
-            // Implement Google OAuth login
-            console.log('Google login clicked');
-            // window.location.href = '/auth/google';
-            // Or use Google OAuth SDK
+            const result = await dispatch(loginWithGoogleAsync()).unwrap();
+            if (result.success) {
+                navigate('/');
+            }
         } catch (error) {
             console.error('Google login error:', error);
             setErrors(prev => ({
@@ -207,10 +234,10 @@ const PandaChatLogin: React.FC<PandaChatLoginProps> = ({
 
     const handleFacebookLogin = async (): Promise<void> => {
         try {
-            // Implement Facebook OAuth login
-            console.log('Facebook login clicked');
-            // window.location.href = '/auth/facebook';
-            // Or use Facebook SDK
+            const result = await dispatch(loginWithFacebookAsync()).unwrap();
+            if (result.success) {
+                navigate('/');
+            }
         } catch (error) {
             console.error('Facebook login error:', error);
             setErrors(prev => ({
@@ -287,7 +314,11 @@ const PandaChatLogin: React.FC<PandaChatLoginProps> = ({
                                     disabled={isFormDisabled}
                                     className="flex items-center justify-center px-4 py-3 border border-gray-300 rounded-lg bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-purple-200 focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
-                                    <GoogleIcon />
+                                    {oauthLoading.google ? (
+                                        <div className="w-5 h-5 border-2 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
+                                    ) : (
+                                        <GoogleIcon />
+                                    )}
                                 </button>
 
                                 {/* Facebook Login */}
@@ -296,7 +327,11 @@ const PandaChatLogin: React.FC<PandaChatLoginProps> = ({
                                     disabled={isFormDisabled}
                                     className="flex items-center justify-center px-4 py-3 border border-gray-300 rounded-lg bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-purple-200 focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
-                                    <FacebookIcon />
+                                    {oauthLoading.facebook ? (
+                                        <div className="w-5 h-5 border-2 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
+                                    ) : (
+                                        <FacebookIcon />
+                                    )}
                                 </button>
 
                                 {/* GitHub Login */}

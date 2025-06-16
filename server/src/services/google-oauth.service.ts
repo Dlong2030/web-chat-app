@@ -6,9 +6,7 @@ export class GoogleOAuthService {
     private static readonly TOKEN_URL = 'https://oauth2.googleapis.com/token';
     private static readonly USER_INFO_URL = 'https://www.googleapis.com/oauth2/v2/userinfo';
 
-    /**
-     * Tạo URL để redirect user đến Google OAuth
-     */
+    // Tạo URL để redirect user đến Google OAuth
     static getAuthUrl(state?: string): string {
         const baseUrl = 'https://accounts.google.com/o/oauth2/v2/auth';
         const params = new URLSearchParams({
@@ -24,9 +22,7 @@ export class GoogleOAuthService {
         return `${baseUrl}?${params.toString()}`;
     }
 
-    /**
-     * Đổi authorization code lấy access token
-     */
+    // Đổi authorization code lấy access token
     static async exchangeCodeForTokens(code: string): Promise<OAuthTokens> {
         try {
             const response = await axios.post<{
@@ -53,9 +49,7 @@ export class GoogleOAuthService {
         }
     }
 
-    /**
-     * Lấy thông tin user từ Google API
-     */
+    // Lấy thông tin user từ Google API
     static async getUserInfo(accessToken: string): Promise<GoogleUserData> {
         try {
             const response = await axios.get<GoogleUserData>(this.USER_INFO_URL, {
@@ -64,7 +58,15 @@ export class GoogleOAuthService {
                 }
             });
 
-            return response.data;
+            // Log dữ liệu nhận được từ Google
+            console.log('Raw Google user data:', response.data);
+
+            return {
+                id: response.data.id,
+                email: response.data.email,
+                name: response.data.name,
+                picture: response.data.picture
+            };
         } catch (error: any) {
             throw new Error(`Failed to get Google user info: ${error.response?.data?.error?.message || error.message}`);
         }

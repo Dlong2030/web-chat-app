@@ -206,13 +206,23 @@ export class AuthService {
      */
     static async handleGoogleAuth(code: string, UserModel: any): Promise<AuthResult> {
         try {
-            // 1. Đổi code lấy access token
             const tokens = await GoogleOAuthService.exchangeCodeForTokens(code);
-
-            // 2. Lấy thông tin người dùng từ Google
             const googleUser = await GoogleOAuthService.getUserInfo(tokens.accessToken);
 
-            // 3. Tìm hoặc tạo người dùng trong cơ sở dữ liệu
+            // Debug: log dữ liệu user nhận được
+            console.log('Google user data:', {
+                id: googleUser.id,
+                email: googleUser.email,
+                name: googleUser.name
+            });
+
+            // Xử lý trường hợp không có email
+            if (!googleUser.email) {
+                googleUser.email = `${googleUser.id}@google.com`;
+                console.warn(`Generated email for Google user: ${googleUser.email}`);
+            }
+
+            // Tìm hoặc tạo người dùng trong cơ sở dữ liệu
             const authResult = await this.findOrCreateOAuthUser(
                 googleUser,
                 'google',
@@ -222,6 +232,7 @@ export class AuthService {
 
             return authResult;
         } catch (error: any) {
+            console.error('Google auth error details:', error);
             throw new AppError(`Google authentication failed: ${error.message}`, 401, 'GOOGLE_AUTH_FAILED');
         }
     }
@@ -231,16 +242,27 @@ export class AuthService {
      */
     static async handleFacebookAuth(code: string, UserModel: any): Promise<AuthResult> {
         try {
-            // 1. Đổi code lấy access token
+            // Đổi code lấy access token
             const shortLivedTokens = await FacebookOAuthService.exchangeCodeForTokens(code);
 
-            // 2. Đổi sang token dài hạn (60 ngày)
+            // Đổi sang token dài hạn (60 ngày)
             const tokens = await FacebookOAuthService.exchangeForLongLivedToken(shortLivedTokens.accessToken);
 
-            // 3. Lấy thông tin người dùng từ Facebook
+            // Lấy thông tin người dùng từ Facebook
             const facebookUser = await FacebookOAuthService.getUserInfo(tokens.accessToken);
 
-            // 4. Tìm hoặc tạo người dùng trong cơ sở dữ liệu
+            console.log('Facebook user data:', {
+                id: facebookUser.id,
+                email: facebookUser.email,
+                name: facebookUser.name
+            });
+
+            if (!facebookUser.email) {
+                facebookUser.email = `${facebookUser.id}@facebook.com`;
+                console.warn(`Generated email for Facebook user: ${facebookUser.email}`);
+            }
+
+            // Tìm hoặc tạo người dùng trong cơ sở dữ liệu
             const authResult = await this.findOrCreateOAuthUser(
                 facebookUser,
                 'facebook',
@@ -266,34 +288,55 @@ export class AuthService {
         let user: IUser;
         let isNewUser = false;
 
-        // 1. Tìm người dùng theo provider ID
+        // Validate required fields
+        if (!userData.id) {
+            throw new AppError(`${provider} user id is missing`, 400, 'OAUTH_ID_MISSING');
+        }
+
+        // Handle missing email
+        if (!userData.email) {
+            userData.email = `${userData.id}@${provider}.com`;
+            console.warn(`Generated email for ${provider} user: ${userData.email}`);
+        }
+
+        // Try to find user by providerId first
         user = await UserModel.findOne({
             'authProviders.provider': provider,
             'authProviders.providerId': userData.id
         });
 
         if (user) {
-            // Người dùng đã tồn tại, cập nhật thông tin OAuth
+            // User exists - update provider info
+            console.log(`Found existing ${provider} user: ${user.email}`);
             await this.updateOAuthProvider(user, provider, userData, tokens);
         } else {
-            // 2. Tìm người dùng theo email (nếu có)
+            // Try to find by email (in case user signed up with other method)
             if (userData.email) {
-                user = await UserModel.findOne({ email: userData.email });
+                user = await UserModel.findOne({ email: userData.email.toLowerCase() });
+            }
 
-                if (user) {
-                    // Thêm OAuth provider vào người dùng đã có
-                    await this.addOAuthProvider(user, provider, userData, tokens);
-                } else {
-                    // 3. Tạo người dùng mới
+            if (user) {
+                // User exists with same email - add new provider
+                console.log(`Adding ${provider} auth to existing user: ${user.email}`);
+                await this.addOAuthProvider(user, provider, userData, tokens);
+            } else {
+                // Create completely new user
+                console.log(`Creating new user from ${provider} auth`);
+                try {
                     user = await this.createOAuthUser(userData, provider, tokens, UserModel);
                     isNewUser = true;
+                } catch (error) {
+                    console.error('Error creating OAuth user:', error);
+                    throw new AppError(
+                        `Failed to create ${provider} user: ${"error.message"}`,
+                        500,
+                        'USER_CREATION_FAILED'
+                    );
                 }
-            } else {
-                throw new AppError('Email is required from OAuth provider', 400, 'EMAIL_REQUIRED');
             }
         }
 
-        // Sinh JWT tokens bằng phương thức nhất quán
+        // Generate tokens
         const jwtTokens = this.generateTokens(user._id.toString());
 
         return {
@@ -313,22 +356,47 @@ export class AuthService {
         userData: GoogleUserData | FacebookUserData,
         tokens: any
     ): Promise<void> {
-        const providerIndex = user.authProviders.findIndex(
-            p => p.provider === provider && p.providerId === userData.id
-        );
+        try {
+            const providerIndex = user.authProviders.findIndex(
+                p => p.provider === provider && p.providerId === userData.id
+            );
 
-        if (providerIndex !== -1) {
-            user.authProviders[providerIndex] = {
-                ...user.authProviders[providerIndex],
-                providerEmail: userData.email,
-                accessToken: tokens.accessToken,
-                refreshToken: tokens.refreshToken,
-                expiresAt: tokens.expiresAt,
-                updatedAt: new Date()
-            };
+            if (providerIndex !== -1) {
+                // Tạo bản sao mới để không làm mất dữ liệu gốc
+                const updatedProvider = {
+                    ...user.authProviders[providerIndex],
+                    providerEmail: userData.email,
+                    accessToken: tokens.accessToken,
+                    refreshToken: tokens.refreshToken,
+                    expiresAt: tokens.expiresAt,
+                    updatedAt: new Date()
+                };
+
+                // Đảm bảo giữ nguyên các trường bắt buộc
+                updatedProvider.provider = provider;
+                updatedProvider.providerId = userData.id;
+
+                user.authProviders[providerIndex] = updatedProvider;
+            } else {
+                // Nếu không tìm thấy, thêm provider mới
+                console.warn(`Provider not found, adding new for user ${user.email}`);
+                user.authProviders.push({
+                    provider,
+                    providerId: userData.id,
+                    providerEmail: userData.email,
+                    accessToken: tokens.accessToken,
+                    refreshToken: tokens.refreshToken,
+                    expiresAt: tokens.expiresAt,
+                    createdAt: new Date(),
+                    updatedAt: new Date()
+                });
+            }
+
+            await user.save();
+        } catch (error) {
+            console.error('Error updating OAuth provider:', error);
+            throw error;
         }
-
-        await user.save();
     }
 
     /**
@@ -340,18 +408,23 @@ export class AuthService {
         userData: GoogleUserData | FacebookUserData,
         tokens: any
     ): Promise<void> {
-        user.authProviders.push({
-            provider,
-            providerId: userData.id,
-            providerEmail: userData.email,
-            accessToken: tokens.accessToken,
-            refreshToken: tokens.refreshToken,
-            expiresAt: tokens.expiresAt,
-            createdAt: new Date(),
-            updatedAt: new Date()
-        });
+        try {
+            user.authProviders.push({
+                provider,
+                providerId: userData.id,
+                providerEmail: userData.email,
+                accessToken: tokens.accessToken,
+                refreshToken: tokens.refreshToken,
+                expiresAt: tokens.expiresAt,
+                createdAt: new Date(),
+                updatedAt: new Date()
+            });
 
-        await user.save();
+            await user.save();
+        } catch (error) {
+            console.error('Error adding OAuth provider:', error);
+            throw error;
+        }
     }
 
     /**
@@ -363,6 +436,8 @@ export class AuthService {
         tokens: any,
         UserModel: any
     ): Promise<IUser> {
+        const displayName = userData.name || userData.email.split('@')[0] || 'User';
+
         // Tạo username duy nhất từ email hoặc tên
         const baseUsername = userData.email?.split('@')[0] || userData.name.toLowerCase().replace(/\s+/g, '');
         const username = await this.generateUniqueUsername(baseUsername, UserModel);
@@ -381,10 +456,10 @@ export class AuthService {
         const newUser = new UserModel({
             email: userData.email,
             username,
-            displayName: userData.name,
+            displayName,
             password: randomPassword,
             avatarUrl,
-            isVerified: true, // Người dùng OAuth được xác thực luôn
+            isVerified: true,
             authProviders: [{
                 provider,
                 providerId: userData.id,
@@ -394,7 +469,16 @@ export class AuthService {
                 expiresAt: tokens.expiresAt,
                 createdAt: new Date(),
                 updatedAt: new Date()
-            }]
+            }],
+            isActive: true,
+            status: 'online',
+            theme: 'light',
+            language: 'vi',
+            notificationSettings: {
+                soundEnabled: true,
+                vibrationEnabled: true,
+                globalMute: false
+            }
         });
 
         return await newUser.save();
