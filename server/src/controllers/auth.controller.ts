@@ -243,17 +243,30 @@ export class AuthController {
         try {
             const { code, error, state } = req.query;
 
-            // Kiểm tra lỗi từ Google
             if (error) {
-                res.status(400).json({
-                    success: false,
-                    message: 'Google authentication failed',
-                    error: error as string
-                });
+                const errorPage = `
+                <!DOCTYPE html>
+                <html>
+                <head><title>Authentication Error</title></head>
+                <body>
+                    <script>
+                        if (window.opener) {
+                            window.opener.postMessage({
+                                type: 'GOOGLE_AUTH_ERROR',
+                                error: '${error}'
+                            }, '${process.env.CLIENT_URL}');
+                            window.close();
+                        } else {
+                            window.location.href = '${process.env.CLIENT_URL}/login?error=auth_failed';
+                        }
+                    </script>
+                </body>
+                </html>
+            `;
+                res.send(errorPage);
                 return;
             }
 
-            // Kiểm tra authorization code
             if (!code) {
                 res.status(400).json({
                     success: false,
@@ -262,49 +275,72 @@ export class AuthController {
                 return;
             }
 
-            // Xử lý authentication
             const authResult = await AuthService.handleGoogleAuth(code as string, User);
 
-            // Set JWT token vào cookie (tùy chọn)
             res.cookie('accessToken', authResult.accessToken, {
                 httpOnly: true,
-                secure: process.env.NODE_ENV === 'development',
-                maxAge: 7 * 24 * 60 * 60 * 1000 // 7 ngày
+                secure: process.env.NODE_ENV === 'production',
+                maxAge: 7 * 24 * 60 * 60 * 1000,
+                sameSite: 'lax' 
             });
 
             res.cookie('refreshToken', authResult.refreshToken, {
                 httpOnly: true,
-                secure: process.env.NODE_ENV === 'development',
-                maxAge: 30 * 24 * 60 * 60 * 1000 // 30 ngày
+                secure: process.env.NODE_ENV === 'production',
+                maxAge: 30 * 24 * 60 * 60 * 1000,
+                sameSite: 'lax' 
             });
 
-            // Redirect về frontend với thông tin user
-            const redirectUrl = new URL(process.env.CLIENT_URL || 'http://localhost:3000');
-            redirectUrl.searchParams.set('auth', 'success');
-            redirectUrl.searchParams.set('newUser', authResult.isNewUser.toString());
-            if (typeof state === 'string') {
-                redirectUrl.searchParams.set('state', state);
-            }
+            // Tạo success page thay vì redirect
+            const successPage = `
+                <!DOCTYPE html>
+                <html>
+                <head><title>Authentication Success</title></head>
+                <body>
+                    <script>
+                        if (window.opener) {
+                            window.opener.postMessage({
+                                type: 'GOOGLE_AUTH_SUCCESS',
+                                isNewUser: ${authResult.isNewUser},
+                                state: '${state || ''}'
+                            }, '${process.env.CLIENT_URL}');
+                            window.close();
+                        } else {
+                            window.location.href = '${process.env.CLIENT_URL}/dashboard';
+                        }
+                    </script>
+                </body>
+                </html>
+            `;
 
+            res.send(successPage);
+            return;
 
-            res.redirect(redirectUrl.toString());
-
-            // Tạm thời trả về JSON response để test
-            res.json({
-                success: true,
-                message: 'Google authentication successful',
-                data: {
-                    code: code,
-                    state: state
-                }
-            });
         } catch (error: any) {
             console.error('Google auth callback error:', error);
-            res.status(500).json({
-                success: false,
-                message: 'Internal server error during Google authentication',
-                error: error.message
-            });
+
+            const errorPage = `
+            <!DOCTYPE html>
+            <html>
+            <head><title>Authentication Error</title></head>
+            <body>
+                <script>
+                    if (window.opener) {
+                        window.opener.postMessage({
+                            type: 'GOOGLE_AUTH_ERROR',
+                            error: '${error.message}'
+                        }, '${process.env.CLIENT_URL}');
+                        window.close();
+                    } else {
+                        window.location.href = '${process.env.CLIENT_URL}/login?error=auth_failed';
+                    }
+                </script>
+            </body>
+            </html>
+        `;
+
+            res.send(errorPage);
+            return;
         }
     };
 
@@ -334,7 +370,6 @@ export class AuthController {
         try {
             const { code, error, state } = req.query;
 
-            // Kiểm tra lỗi từ Facebook
             if (error) {
                 res.status(400).json({
                     success: false,
@@ -344,7 +379,6 @@ export class AuthController {
                 return;
             }
 
-            // Kiểm tra authorization code
             if (!code) {
                 res.status(400).json({
                     success: false,
@@ -353,49 +387,45 @@ export class AuthController {
                 return;
             }
 
-            // Xử lý authentication
             const authResult = await AuthService.handleFacebookAuth(code as string, User);
 
-            // Set JWT token vào cookie (tùy chọn)
             res.cookie('accessToken', authResult.accessToken, {
                 httpOnly: true,
-                secure: process.env.NODE_ENV === 'development',
-                maxAge: 7 * 24 * 60 * 60 * 1000 // 7 ngày
+                secure: process.env.NODE_ENV === 'production',
+                maxAge: 7 * 24 * 60 * 60 * 1000
             });
 
             res.cookie('refreshToken', authResult.refreshToken, {
                 httpOnly: true,
-                secure: process.env.NODE_ENV === 'development',
-                maxAge: 30 * 24 * 60 * 60 * 1000 // 30 ngày
+                secure: process.env.NODE_ENV === 'production',
+                maxAge: 30 * 24 * 60 * 60 * 1000
             });
 
-            // Redirect về frontend với thông tin user
             const redirectUrl = new URL(process.env.CLIENT_URL || 'http://localhost:3000');
             redirectUrl.searchParams.set('auth', 'success');
             redirectUrl.searchParams.set('newUser', authResult.isNewUser.toString());
+
             if (typeof state === 'string') {
                 redirectUrl.searchParams.set('state', state);
             }
 
-
             res.redirect(redirectUrl.toString());
+            return;
 
-            // Tạm thời trả về JSON response để test
-            res.json({
-                success: true,
-                message: 'Facebook authentication successful',
-                data: {
-                    code: code,
-                    state: state
-                }
-            });
         } catch (error: any) {
             console.error('Facebook auth callback error:', error);
-            res.status(500).json({
-                success: false,
-                message: 'Internal server error during Facebook authentication',
-                error: error.message
-            });
+
+            if (res.headersSent) {
+                console.error('Response already sent, cannot send error');
+                return;
+            }
+
+            const redirectUrl = new URL(process.env.CLIENT_URL || 'http://localhost:3000');
+            redirectUrl.searchParams.set('auth', 'error');
+            redirectUrl.searchParams.set('error', encodeURIComponent(error.message));
+
+            res.redirect(redirectUrl.toString());
+            return;
         }
     };
 }

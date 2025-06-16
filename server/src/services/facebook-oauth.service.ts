@@ -62,7 +62,15 @@ export class FacebookOAuthService {
                 }
             });
 
-            return response.data;
+            // Log dữ liệu nhận được từ Facebook
+            console.log('Raw Facebook user data:', response.data);
+
+            return {
+                id: response.data.id,
+                email: response.data.email,
+                name: response.data.name,
+                picture: response.data.picture
+            };
         } catch (error: any) {
             throw new Error(`Failed to get Facebook user info: ${error.response?.data?.error?.message || error.message}`);
         }
