@@ -56,31 +56,35 @@ export const loginWithGoogleAsync = createAsyncThunk(
                 return rejectWithValue(result.error || 'Google login failed');
             }
 
-            // Sau khi OAuth thành công, cookies đã được set
-            // Cần fetch thông tin user từ backend
-            const response = await fetch(`${process.env.REACT_APP_API_URL}/auth/me`, {
-                method: 'GET',
-                credentials: 'include',
-                headers: {
-                    'Content-Type': 'application/json',
-                }
-            });
+            try {
+                const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:5000/api/v1'}/auth/me`, {
+                    method: 'GET',
+                    credentials: 'include',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
 
-            if (!response.ok) {
-                throw new Error('Failed to fetch user data');
-            }
+                if (!response.ok) {
+                    throw new Error(`Failed to fetch user data: ${response.status}`);
+                }
 
             const userData = await response.json();
 
-            return {
-                success: true,
-                data: {
-                    user: userData.data,
-                    isNewUser: result.data?.isNewUser || false
-                }
-            };
+                return {
+                    success: true,
+                    data: {
+                        user: userData.data,
+                        isNewUser: result.data?.isNewUser || false
+                    }
+                };
+            } catch (fetchError: any) {
+                console.error('Error fetching user data after OAuth:', fetchError);
+                return rejectWithValue('Failed to fetch user data after authentication');
+            }
 
         } catch (error: any) {
+            console.error('Google OAuth error:', error);
             return rejectWithValue(error.message || 'Google login failed');
         }
     }

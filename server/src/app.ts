@@ -4,6 +4,7 @@ dotenv.config();
 import cors from "cors";
 import bodyParser from "body-parser";
 import morgan from "morgan";
+import cookieParser from "cookie-parser";
 import { healthCheck } from './config/database';
 import { authRoutes } from './routes/auth.routes';
 import session from 'express-session';
@@ -25,6 +26,7 @@ app.use(
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(bodyParser.json({ limit: "50mb" }));
+app.use(cookieParser());
 app.use(morgan('dev'));
 // app.use(morgan('combined'));
 // app.use(morgan('common'));

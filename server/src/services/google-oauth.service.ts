@@ -25,6 +25,8 @@ export class GoogleOAuthService {
     // Đổi authorization code lấy access token
     static async exchangeCodeForTokens(code: string): Promise<OAuthTokens> {
         try {
+            console.log('Exchanging Google authorization code for tokens...');
+            
             const response = await axios.post<{
                 access_token: string;
                 refresh_token: string;
@@ -38,6 +40,7 @@ export class GoogleOAuthService {
             });
 
             const { access_token, refresh_token, expires_in } = response.data;
+            console.log('Successfully exchanged code for tokens');
 
             return {
                 accessToken: access_token,
@@ -45,6 +48,7 @@ export class GoogleOAuthService {
                 expiresAt: expires_in ? new Date(Date.now() + expires_in * 1000) : undefined
             };
         } catch (error: any) {
+            console.error('Failed to exchange Google code for tokens:', error.response?.data || error.message);
             throw new Error(`Failed to exchange Google code: ${error.response?.data?.error_description || error.message}`);
         }
     }
@@ -52,6 +56,8 @@ export class GoogleOAuthService {
     // Lấy thông tin user từ Google API
     static async getUserInfo(accessToken: string): Promise<GoogleUserData> {
         try {
+            console.log('Fetching user info from Google API...');
+            
             const response = await axios.get<GoogleUserData>(this.USER_INFO_URL, {
                 headers: {
                     Authorization: `Bearer ${accessToken}`
@@ -68,6 +74,7 @@ export class GoogleOAuthService {
                 picture: response.data.picture
             };
         } catch (error: any) {
+            console.error('Failed to get Google user info:', error.response?.data || error.message);
             throw new Error(`Failed to get Google user info: ${error.response?.data?.error?.message || error.message}`);
         }
     }

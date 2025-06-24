@@ -243,7 +243,10 @@ export class AuthController {
         try {
             const { code, error, state } = req.query;
 
+            console.log('Google callback received:', { code: !!code, error, state });
+
             if (error) {
+                console.error('Google OAuth error:', error);
                 const errorPage = `
                 <!DOCTYPE html>
                 <html>
@@ -254,10 +257,10 @@ export class AuthController {
                             window.opener.postMessage({
                                 type: 'GOOGLE_AUTH_ERROR',
                                 error: '${error}'
-                            }, '${process.env.CLIENT_URL}');
+                            }, '${process.env.CLIENT_URL || 'http://localhost:3000'}');
                             window.close();
                         } else {
-                            window.location.href = '${process.env.CLIENT_URL}/login?error=auth_failed';
+                            window.location.href = '${process.env.CLIENT_URL || 'http://localhost:3000'}/login?error=auth_failed';
                         }
                     </script>
                 </body>
@@ -268,30 +271,53 @@ export class AuthController {
             }
 
             if (!code) {
-                res.status(400).json({
-                    success: false,
-                    message: 'Authorization code is required'
-                });
+                console.error('No authorization code received');
+                const errorPage = `
+                <!DOCTYPE html>
+                <html>
+                <head><title>Authentication Error</title></head>
+                <body>
+                    <script>
+                        if (window.opener) {
+                            window.opener.postMessage({
+                                type: 'GOOGLE_AUTH_ERROR',
+                                error: 'Authorization code is required'
+                            }, '${process.env.CLIENT_URL || 'http://localhost:3000'}');
+                            window.close();
+                        } else {
+                            window.location.href = '${process.env.CLIENT_URL || 'http://localhost:3000'}/login?error=auth_failed';
+                        }
+                    </script>
+                </body>
+                </html>
+            `;
+                res.send(errorPage);
                 return;
             }
 
+            console.log('Processing Google OAuth with code:', code);
+
             const authResult = await AuthService.handleGoogleAuth(code as string, User);
 
+            console.log('Google OAuth successful, setting cookies');
+
+            // Set cookies với cấu hình phù hợp
             res.cookie('accessToken', authResult.accessToken, {
                 httpOnly: true,
                 secure: process.env.NODE_ENV === 'production',
-                maxAge: 7 * 24 * 60 * 60 * 1000,
-                sameSite: 'lax' 
+                maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+                sameSite: 'lax',
+                path: '/'
             });
 
             res.cookie('refreshToken', authResult.refreshToken, {
                 httpOnly: true,
                 secure: process.env.NODE_ENV === 'production',
-                maxAge: 30 * 24 * 60 * 60 * 1000,
-                sameSite: 'lax' 
+                maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+                sameSite: 'lax',
+                path: '/'
             });
 
-            // Tạo success page thay vì redirect
             const successPage = `
                 <!DOCTYPE html>
                 <html>
@@ -303,10 +329,10 @@ export class AuthController {
                                 type: 'GOOGLE_AUTH_SUCCESS',
                                 isNewUser: ${authResult.isNewUser},
                                 state: '${state || ''}'
-                            }, '${process.env.CLIENT_URL}');
+                            }, '${process.env.CLIENT_URL || 'http://localhost:3000'}');
                             window.close();
                         } else {
-                            window.location.href = '${process.env.CLIENT_URL}/dashboard';
+                            window.location.href = '${process.env.CLIENT_URL || 'http://localhost:3000'}/dashboard';
                         }
                     </script>
                 </body>
@@ -328,11 +354,11 @@ export class AuthController {
                     if (window.opener) {
                         window.opener.postMessage({
                             type: 'GOOGLE_AUTH_ERROR',
-                            error: '${error.message}'
-                        }, '${process.env.CLIENT_URL}');
+                            error: '${error.message || 'Authentication failed'}'
+                        }, '${process.env.CLIENT_URL || 'http://localhost:3000'}');
                         window.close();
                     } else {
-                        window.location.href = '${process.env.CLIENT_URL}/login?error=auth_failed';
+                        window.location.href = '${process.env.CLIENT_URL || 'http://localhost:3000'}/login?error=auth_failed';
                     }
                 </script>
             </body>

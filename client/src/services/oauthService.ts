@@ -123,14 +123,18 @@ class OAuthService {
     static loginWithGoogle(): Promise<any> {
         return new Promise((resolve, reject) => {
             const state = Math.random().toString(36).substring(2, 15);
+            const authUrl = `${this.baseURL}/auth/google?state=${state}`;
+            console.log('Opening Google OAuth popup with URL:', authUrl);
 
-            const authUrl = `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/auth/google?state=${state}`;
-            console.log('Opening popup with URL:', authUrl);
+            const width = 500;
+            const height = 600;
+            const left = window.screenX + (window.outerWidth - width) / 2;
+            const top = window.screenY + (window.outerHeight - height) / 2;
 
             const popup = window.open(
                 authUrl,
                 'google-login',
-                'width=500,height=600,scrollbars=yes,resizable=yes'
+                `width=${width},height=${height},left=${left},top=${top},scrollbars=yes,resizable=yes`
             );
 
             if (!popup) {
@@ -139,16 +143,14 @@ class OAuthService {
             }
 
             const messageListener = (event: MessageEvent) => {
-                console.log('Received message:', event.data);
+                console.log('Received message from popup:', event.data);
                 console.log('Event origin:', event.origin);
 
-                // ✅ FIX: Chấp nhận message từ bất kỳ origin nào (vì server gửi HTML page)
-                // Hoặc có thể check cụ thể các origin allowed
+                // Kiểm tra origin để bảo mật
                 const allowedOrigins = [
-                    window.location.origin,           // http://localhost:3000
-                    'http://localhost:5000',          // Server origin
-                    'http://localhost:3001',          // Backup
-                    // Thêm production URLs nếu cần
+                    window.location.origin,          
+                    'http://localhost:5000',         
+                    'http://localhost:3001',          
                 ];
 
                 // Tạm thời bỏ check origin để test
@@ -205,9 +207,23 @@ class OAuthService {
     static async loginWithFacebook(options?: OAuthPopupOptions): Promise<OAuthResponse> {
         try {
             const state = this.generateRandomState();
-            const authUrl = `${this.baseURL}/auth/facebook?state=${state}`;
+            const width = 500;
+            const height = 600;
+            const left = window.screenX + (window.outerWidth - width) / 2;
+            const top = window.screenY + (window.outerHeight - height) / 2;
 
-            return await this.openOAuthPopup(authUrl, 'facebook-login', options);
+            const authUrl = `${this.baseURL}/auth/facebook?state=${state}`;
+            const popup = window.open(
+                authUrl,
+                'facebook-login',
+                `width=${width},height=${height},left=${left},top=${top},scrollbars=yes,resizable=yes`
+            );
+
+            if (!popup) {
+                throw new Error('Popup was blocked. Please allow popups for this site.');
+            }
+
+            return await this.handleOAuthPopup(popup, state);
         } catch (error: any) {
             return {
                 success: false,
@@ -222,15 +238,85 @@ class OAuthService {
     static async loginWithGitHub(options?: OAuthPopupOptions): Promise<OAuthResponse> {
         try {
             const state = this.generateRandomState();
-            const authUrl = `${this.baseURL}/auth/github?state=${state}`;
+            const width = 500;
+            const height = 600;
+            const left = window.screenX + (window.outerWidth - width) / 2;
+            const top = window.screenY + (window.outerHeight - height) / 2;
 
-            return await this.openOAuthPopup(authUrl, 'github-login', options);
+            const authUrl = `${this.baseURL}/auth/github?state=${state}`;
+            const popup = window.open(
+                authUrl,
+                'github-login',
+                `width=${width},height=${height},left=${left},top=${top},scrollbars=yes,resizable=yes`
+            );
+
+            if (!popup) {
+                throw new Error('Popup was blocked. Please allow popups for this site.');
+            }
+
+            return await this.handleOAuthPopup(popup, state);
         } catch (error: any) {
             return {
                 success: false,
                 error: error.message || 'Failed to login with GitHub'
             };
         }
+    }
+
+    /**
+     * Xử lý chung cho OAuth popup
+     */
+    private static handleOAuthPopup(popup: Window, state: string): Promise<OAuthResponse> {
+        return new Promise((resolve, reject) => {
+            const messageListener = (event: MessageEvent) => {
+                if (event.origin !== window.location.origin) {
+                    return;
+                }
+
+                if (event.data.type === 'OAUTH_SUCCESS') {
+                    window.removeEventListener('message', messageListener);
+                    popup.close();
+                    resolve({
+                        success: true,
+                        data: event.data.payload
+                    });
+                } else if (event.data.type === 'OAUTH_ERROR') {
+                    window.removeEventListener('message', messageListener);
+                    popup.close();
+                    resolve({
+                        success: false,
+                        error: event.data.error || 'Authentication failed'
+                    });
+                }
+            };
+
+            window.addEventListener('message', messageListener);
+
+            // Kiểm tra popup có bị đóng không
+            const checkClosed = setInterval(() => {
+                if (popup.closed) {
+                    clearInterval(checkClosed);
+                    window.removeEventListener('message', messageListener);
+                    resolve({
+                        success: false,
+                        error: 'Authentication was cancelled'
+                    });
+                }
+            }, 500);
+
+            // Timeout sau 2 phút
+            setTimeout(() => {
+                if (!popup.closed) {
+                    popup.close();
+                    window.removeEventListener('message', messageListener);
+                    clearInterval(checkClosed);
+                    resolve({
+                        success: false,
+                        error: 'Authentication timeout'
+                    });
+                }
+            }, 2 * 60 * 1000);
+        });
     }
 }
 
