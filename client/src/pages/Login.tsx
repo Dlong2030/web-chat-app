@@ -1,6 +1,6 @@
 import React, { useState, ChangeEvent, useEffect } from 'react';
 import { User, Lock, Eye, EyeOff } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Checkbox } from '../components/ui/Checkbox';
@@ -46,6 +46,7 @@ const PandaChatLogin: React.FC<PandaChatLoginProps> = ({
 }) => {
     const dispatch = useAppDispatch();
     const navigate = useNavigate();
+    const location = useLocation();
     const { isLoading, error, isAuthenticated } = useAppSelector(selectAuth);
     const oauthLoading = useAppSelector(selectOAuthLoading);
 
@@ -63,9 +64,14 @@ const PandaChatLogin: React.FC<PandaChatLoginProps> = ({
     // Redirect if already authenticated
     useEffect(() => {
         if (isAuthenticated) {
-            navigate('/dashboard');
+            // Check for returnUrl in query parameters
+            const params = new URLSearchParams(location.search);
+            const returnUrl = params.get('returnUrl');
+            const decodedReturnUrl = returnUrl ? decodeURIComponent(returnUrl) : '/dashboard';
+            
+            navigate(decodedReturnUrl, { replace: true });
         }
-    }, [isAuthenticated, navigate]);
+    }, [isAuthenticated, navigate, location]);
 
     // Clear Redux error when component unmounts
     useEffect(() => {
@@ -219,15 +225,24 @@ const PandaChatLogin: React.FC<PandaChatLoginProps> = ({
     // Cập nhật các hàm xử lý OAuth
     const handleGoogleLogin = async (): Promise<void> => {
         try {
+            console.log('Starting Google login...');
             const result = await dispatch(loginWithGoogleAsync()).unwrap();
+            
             if (result.success) {
-                navigate('/');
+                console.log('Google login successful');
+                navigate('/dashboard');
+            } else {
+                console.error('Google login failed:', result);
+                setErrors(prev => ({
+                    ...prev,
+                    general: 'Failed to login with Google. Please try again.'
+                }));
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error('Google login error:', error);
             setErrors(prev => ({
                 ...prev,
-                general: 'Failed to login with Google. Please try again.'
+                general: error.message || 'Failed to login with Google. Please try again.'
             }));
         }
     };

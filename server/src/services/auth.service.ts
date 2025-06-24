@@ -206,8 +206,13 @@ export class AuthService {
      */
     static async handleGoogleAuth(code: string, UserModel: any): Promise<AuthResult> {
         try {
+            console.log('Starting Google OAuth process with code:', code.substring(0, 10) + '...');
+            
             const tokens = await GoogleOAuthService.exchangeCodeForTokens(code);
+            console.log('Successfully exchanged code for tokens');
+            
             const googleUser = await GoogleOAuthService.getUserInfo(tokens.accessToken);
+            console.log('Successfully retrieved Google user info');
 
             // Debug: log dữ liệu user nhận được
             console.log('Google user data:', {
@@ -230,9 +235,17 @@ export class AuthService {
                 UserModel
             );
 
+            console.log('Google OAuth completed successfully');
             return authResult;
         } catch (error: any) {
             console.error('Google auth error details:', error);
+            console.error('Error stack:', error.stack);
+            
+            // Log chi tiết hơn cho các lỗi cụ thể
+            if (error.response) {
+                console.error('Google API response error:', error.response.data);
+            }
+            
             throw new AppError(`Google authentication failed: ${error.message}`, 401, 'GOOGLE_AUTH_FAILED');
         }
     }
@@ -399,9 +412,7 @@ export class AuthService {
         }
     }
 
-    /**
-     * Thêm OAuth provider vào người dùng đã có
-     */
+    // Thêm OAuth provider vào người dùng đã có
     private static async addOAuthProvider(
         user: IUser,
         provider: 'google' | 'facebook',
@@ -427,9 +438,7 @@ export class AuthService {
         }
     }
 
-    /**
-     * Tạo người dùng mới từ OAuth
-     */
+    // Tạo người dùng mới từ OAuth
     private static async createOAuthUser(
         userData: GoogleUserData | FacebookUserData,
         provider: 'google' | 'facebook',
@@ -484,9 +493,7 @@ export class AuthService {
         return await newUser.save();
     }
 
-    /**
-     * Sinh username duy nhất
-     */
+    // Sinh username duy nhất
     private static async generateUniqueUsername(baseUsername: string, UserModel: any): Promise<string> {
         let username = baseUsername;
         let counter = 1;
@@ -499,9 +506,7 @@ export class AuthService {
         return username;
     }
 
-    /**
-     * Xác thực JWT token
-     */
+    // Xác thực JWT token
     static verifyToken(token: string): any {
         try {
             return jwt.verify(token, this.JWT_SECRET);
