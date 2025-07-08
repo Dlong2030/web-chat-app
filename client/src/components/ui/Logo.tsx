@@ -52,7 +52,7 @@ export const Logo: React.FC<LogoProps> = ({
     };
 
     return (
-        <div className="text-center mb-8">
+        <div className="flex items-center justify-center text-center">
             <div className={`inline-flex items-center justify-center ${classes.container} rounded-lg mb-4 overflow-hidden`}>
                 {imageUrl ? (
                     <img

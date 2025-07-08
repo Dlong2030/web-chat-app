@@ -67,7 +67,7 @@ const PandaChatLogin: React.FC<PandaChatLoginProps> = ({
             // Check for returnUrl in query parameters
             const params = new URLSearchParams(location.search);
             const returnUrl = params.get('returnUrl');
-            const decodedReturnUrl = returnUrl ? decodeURIComponent(returnUrl) : '/dashboard';
+            const decodedReturnUrl = returnUrl ? decodeURIComponent(returnUrl) : '/';
             
             navigate(decodedReturnUrl, { replace: true });
         }
@@ -230,7 +230,7 @@ const PandaChatLogin: React.FC<PandaChatLoginProps> = ({
             
             if (result.success) {
                 console.log('Google login successful');
-                navigate('/dashboard');
+                navigate('/');
             } else {
                 console.error('Google login failed:', result);
                 setErrors(prev => ({

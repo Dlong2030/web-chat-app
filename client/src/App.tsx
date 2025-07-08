@@ -5,6 +5,8 @@ import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import OAuthCallback from './pages/OAuthCallback';
 import PrivateRoute from './routes/PrivateRoute';
+import ChatApp from './pages/Chats/ChatApp';
+import UserProfile from './pages/UserProfile';
 
 const App: React.FC = () => {
   return (
@@ -13,11 +15,13 @@ const App: React.FC = () => {
         <Routes>
           <Route path='/login' element={<Login />} />
           <Route path='/register' element={<Register />} />
-          <Route path='/dashboard' element={
+          <Route path='/' element={
             <PrivateRoute>
               <Dashboard />
             </PrivateRoute>
           } />
+          <Route path='/chat' element={<ChatApp />} />
+          <Route path='/:username' element={<UserProfile />} />
           <Route path='/auth/callback' element={<OAuthCallback />} />
         </Routes>
       </div>
