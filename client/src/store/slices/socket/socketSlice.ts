@@ -1,33 +1,58 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-import type { MutableSocket } from '../../../types/socket'; 
 
 interface SocketState {
-    socket: MutableSocket | null;
-    isConnected: boolean;
+    connected: boolean;
     error: string | null;
+    reconnecting: boolean;
+    connectionAttempts: number;
 }
 
 const initialState: SocketState = {
-    socket: null,
-    isConnected: false,
+    connected: false,
     error: null,
+    reconnecting: false,
+    connectionAttempts: 0,
 };
 
 const socketSlice = createSlice({
     name: 'socket',
     initialState,
     reducers: {
-        setSocket: (state, action: PayloadAction<MutableSocket | null>) => {
-            state.socket = action.payload;
-        },
         setConnected: (state, action: PayloadAction<boolean>) => {
-            state.isConnected = action.payload;
+            state.connected = action.payload;
+            if (action.payload) {
+                state.error = null;
+                state.reconnecting = false;
+                state.connectionAttempts = 0;
+            }
         },
         setError: (state, action: PayloadAction<string | null>) => {
             state.error = action.payload;
         },
+        setReconnecting: (state, action: PayloadAction<boolean>) => {
+            state.reconnecting = action.payload;
+        },
+        incrementConnectionAttempts: (state) => {
+            state.connectionAttempts += 1;
+        },
+        resetConnectionAttempts: (state) => {
+            state.connectionAttempts = 0;
+        },
+        resetSocket: (state) => {
+            state.connected = false;
+            state.error = null;
+            state.reconnecting = false;
+            state.connectionAttempts = 0;
+        },
     },
 });
 
-export const { setSocket, setConnected, setError } = socketSlice.actions;
+export const {
+    setConnected,
+    setError,
+    setReconnecting,
+    incrementConnectionAttempts,
+    resetConnectionAttempts,
+    resetSocket
+} = socketSlice.actions;
 export default socketSlice.reducer;

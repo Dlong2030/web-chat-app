@@ -16,7 +16,7 @@ import {
     loginWithFacebookAsync,
     selectOAuthLoading
 } from '../store/slices/authSlices';
-import { LoginRequest } from '../types/auth.interfaces';
+import { LoginRequest } from '../types/auth.types';
 import { GoogleIcon, FacebookIcon, GitHubIcon } from '../components/icons/SocialIcons';
 
 // Interface definitions

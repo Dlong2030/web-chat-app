@@ -1,4 +1,5 @@
-import { LoginRequest, LoginResponse, ApiError, User } from '../types/auth.interfaces';
+import { LoginRequest, LoginResponse, ApiError, User } from '../types/auth.types';
+import axios from 'axios';
 
 class AuthService {
     private static baseURL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api/v1';
@@ -57,6 +58,27 @@ class AuthService {
             localStorage.removeItem('accessToken');
             localStorage.removeItem('refreshToken');
             localStorage.removeItem('user');
+        }
+    }
+
+    static async getUserData(accessToken: string) {
+        try {
+            const response = await axios.get(`${process.env.REACT_APP_API_URL || 'http://localhost:5000/api/v1'}/auth/me`, {
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${accessToken}`
+                },
+                withCredentials: true
+            });
+            console.log('User data fetched successfully:', response.data);
+            return response.data;
+
+        } catch (error: any) {
+            throw new Error(
+                error.response?.data?.message ||
+                error.message ||
+                'Failed to fetch user data'
+            );
         }
     }
 

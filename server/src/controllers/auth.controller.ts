@@ -191,7 +191,6 @@ export class AuthController {
      */
     static async getCurrentUser(req: Request, res: Response): Promise<void> {
         try {
-            // Middleware sẽ attach user vào req
             const user = (req as any).user;
 
             if (!user) {
@@ -299,45 +298,32 @@ export class AuthController {
 
             const authResult = await AuthService.handleGoogleAuth(code as string, User);
 
-            console.log('Google OAuth successful, setting cookies');
-
-            // Set cookies với cấu hình phù hợp
-            res.cookie('accessToken', authResult.accessToken, {
-                httpOnly: true,
-                secure: process.env.NODE_ENV === 'production',
-                maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-                sameSite: 'lax',
-                path: '/'
-            });
-
-            res.cookie('refreshToken', authResult.refreshToken, {
-                httpOnly: true,
-                secure: process.env.NODE_ENV === 'production',
-                maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
-                sameSite: 'lax',
-                path: '/'
-            });
-
             const successPage = `
-                <!DOCTYPE html>
-                <html>
-                <head><title>Authentication Success</title></head>
-                <body>
-                    <script>
-                        if (window.opener) {
-                            window.opener.postMessage({
-                                type: 'GOOGLE_AUTH_SUCCESS',
-                                isNewUser: ${authResult.isNewUser},
-                                state: '${state || ''}'
-                            }, '${process.env.CLIENT_URL || 'http://localhost:3000'}');
-                            window.close();
-                        } else {
-                            window.location.href = '${process.env.CLIENT_URL || 'http://localhost:3000'}/dashboard';
-                        }
-                    </script>
-                </body>
-                </html>
-            `;
+            <!DOCTYPE html>
+            <html>
+            <head><title>Authentication Success</title></head>
+            <body>
+                <script>
+                    if (window.opener) {
+                        window.opener.postMessage({
+                            type: 'GOOGLE_AUTH_SUCCESS',
+                            payload: {
+                                accessToken: '${authResult.accessToken}',
+                                refreshToken: '${authResult.refreshToken}',
+                                isNewUser: ${authResult.isNewUser}
+                            },
+                            state: '${state || ''}'
+                        }, '${process.env.CLIENT_URL || 'http://localhost:3000'}');
+                        window.close();
+                    } else {
+                        localStorage.setItem('accessToken', '${authResult.accessToken}');
+                        localStorage.setItem('refreshToken', '${authResult.refreshToken}');
+                        window.location.href = '${process.env.CLIENT_URL || 'http://localhost:3000'}';
+                    }
+                </script>
+            </body>
+            </html>
+        `;
 
             res.send(successPage);
             return;

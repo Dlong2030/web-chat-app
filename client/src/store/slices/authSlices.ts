@@ -1,8 +1,8 @@
-// store/slices/authSlices.ts
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import AuthService from '../../services/authService';
 import OAuthService, { OAuthResponse } from '../../services/oauthService';
-import { LoginRequest, LoginResponse, User } from '../../types/auth.interfaces';
+import { LoginRequest, LoginResponse, User } from '../../types/auth.types';
+import { log } from 'console';
 
 export interface AuthState {
     user: User | null;
@@ -33,14 +33,54 @@ const initialState: AuthState = {
 };
 
 // Async thunk cho login thông thường
-export const loginAsync = createAsyncThunk(
+export const loginAsync = createAsyncThunk<
+    LoginResponse,
+    LoginRequest,
+    { rejectValue: string }
+>(
     'auth/login',
     async (loginData: LoginRequest, { rejectWithValue }) => {
         try {
-            const response = await AuthService.login(loginData);
-            return response;
+            // Thực hiện login trước
+            const loginResponse = await AuthService.login(loginData);
+
+            if (!loginResponse.success) {
+                return rejectWithValue(loginResponse.error || 'Login failed');
+            }
+
+            const accessToken = loginResponse.data?.accessToken;
+            const refreshToken = loginResponse.data?.refreshToken;
+
+            if (!accessToken || !refreshToken) {
+                return rejectWithValue('Missing access or refresh token');
+            }
+
+            // Sau khi login thành công, fetch thông tin user
+            try {
+                const userData = await AuthService.getUserData(accessToken);
+
+                // Trả về dữ liệu kết hợp với đúng LoginResponse structure
+                return {
+                    success: true,
+                    message: 'Login successful',
+                    data: {
+                        user: userData.data,
+                        accessToken: accessToken || '',
+                        refreshToken: refreshToken || ''
+                    }
+                };
+
+            } catch (fetchError: any) {
+                console.error('Error fetching user data after login:', fetchError);
+                return rejectWithValue(fetchError.message);
+            }
+
         } catch (error: any) {
-            return rejectWithValue(error.message || 'Login failed');
+            return rejectWithValue(
+                error.response?.data?.message ||
+                error.message ||
+                'Login failed'
+            );
         }
     }
 );
@@ -56,35 +96,38 @@ export const loginWithGoogleAsync = createAsyncThunk(
                 return rejectWithValue(result.error || 'Google login failed');
             }
 
-            try {
-                const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:5000/api/v1'}/auth/me`, {
-                    method: 'GET',
-                    credentials: 'include',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    }
-                });
+            // Token đã được lưu trong localStorage bởi OAuthService
+            const accessToken = localStorage.getItem('accessToken');
+            const refreshToken = localStorage.getItem('refreshToken');
 
-                if (!response.ok) {
-                    throw new Error(`Failed to fetch user data: ${response.status}`);
-                }
-
-            const userData = await response.json();
-
-                return {
-                    success: true,
-                    data: {
-                        user: userData.data,
-                        isNewUser: result.data?.isNewUser || false
-                    }
-                };
-            } catch (fetchError: any) {
-                console.error('Error fetching user data after OAuth:', fetchError);
-                return rejectWithValue('Failed to fetch user data after authentication');
+            if (!accessToken) {
+                return rejectWithValue('Missing access token');
             }
 
+            // Fetch user data
+            const userResponse = await fetch(`${process.env.REACT_APP_API_URL}/auth/me`, {
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                },
+            });
+
+            if (!userResponse.ok) {
+                throw new Error(`Failed to fetch user data: ${userResponse.status}`);
+            }
+
+            const userData = await userResponse.json();
+
+            return {
+                success: true,
+                data: {
+                    user: userData.data,
+                    accessToken,
+                    refreshToken,
+                    isNewUser: result.data?.isNewUser || false
+                }
+            };
+
         } catch (error: any) {
-            console.error('Google OAuth error:', error);
             return rejectWithValue(error.message || 'Google login failed');
         }
     }
