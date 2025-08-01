@@ -1,23 +1,34 @@
-import { useEffect } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
-import { RootState, AppDispatch } from '../store/index';
-import { connectSocket } from '../store/slices/socket/scoketThunks';
+import { use, useEffect } from 'react';
+import { useSelector } from 'react-redux';
+import { RootState } from '../store';
+import { socketService } from '../services/socketService';
+import { logoutAsync } from '../store/slices/authSlices';
+import { useAppDispatch } from '../store';
 
 export const useSocket = () => {
-    const dispatch = useDispatch<AppDispatch>();
-    const isAuthenticated = useSelector((state: RootState) => state.auth.isAuthenticated);
-    const accessToken = useSelector((state: RootState) => state.auth.accessToken);
-    const { isConnected } = useSelector((state: RootState) => state.socket);
+    const dispatch = useAppDispatch();
+    const { accessToken, isAuthenticated } = useSelector((state: RootState) => state.auth);
+    const { connected, error } = useSelector((state: RootState) => state.socket);
 
     useEffect(() => {
-        if (isAuthenticated && accessToken && !isConnected) {
-            dispatch(connectSocket());
+        if (isAuthenticated && accessToken) {
+            socketService.connect(accessToken);
         }
 
         return () => {
-            // Không disconnect ở đây, để duy trì kết nối khi component unmount
+            socketService.disconnect();
         };
-    }, [isAuthenticated, accessToken, isConnected, dispatch]);
+    }, [isAuthenticated, accessToken]);
 
-    return useSelector((state: RootState) => state.socket.socket);
+    useEffect(() => {
+        if (error === 'Authentication error') {
+            dispatch(logoutAsync());
+        }
+    }, [error, dispatch]);
+
+    return {
+        connected,
+        error,
+        socketService,
+    };
 };

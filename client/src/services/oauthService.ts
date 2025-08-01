@@ -21,93 +21,93 @@ class OAuthService {
     /**
      * Mở popup OAuth và lắng nghe kết quả
      */
-    private static openOAuthPopup(
-        url: string,
-        name: string,
-        options: OAuthPopupOptions = {}
-    ): Promise<OAuthResponse> {
-        return new Promise((resolve, reject) => {
-            const {
-                width = 500,
-                height = 600,
-                centerOnScreen = true
-            } = options;
+    // private static openOAuthPopup(
+    //     url: string,
+    //     name: string,
+    //     options: OAuthPopupOptions = {}
+    // ): Promise<OAuthResponse> {
+    //     return new Promise((resolve, reject) => {
+    //         const {
+    //             width = 500,
+    //             height = 600,
+    //             centerOnScreen = true
+    //         } = options;
 
-            // Tính toán vị trí popup ở giữa màn hình
-            let left = 0;
-            let top = 0;
+    //         // Tính toán vị trí popup ở giữa màn hình
+    //         let left = 0;
+    //         let top = 0;
 
-            if (centerOnScreen && window.screen) {
-                left = (window.screen.width - width) / 2;
-                top = (window.screen.height - height) / 2;
-            }
+    //         if (centerOnScreen && window.screen) {
+    //             left = (window.screen.width - width) / 2;
+    //             top = (window.screen.height - height) / 2;
+    //         }
 
-            const popup = window.open(
-                url,
-                name,
-                `width=${width},height=${height},left=${left},top=${top},scrollbars=yes,resizable=yes`
-            );
+    //         const popup = window.open(
+    //             url,
+    //             name,
+    //             `width=${width},height=${height},left=${left},top=${top},scrollbars=yes,resizable=yes`
+    //         );
 
-            if (!popup) {
-                reject(new Error('Popup was blocked. Please allow popups for this site.'));
-                return;
-            }
+    //         if (!popup) {
+    //             reject(new Error('Popup was blocked. Please allow popups for this site.'));
+    //             return;
+    //         }
 
-            // Tạo unique state để bảo mật
-            const state = this.generateRandomState();
+    //         // Tạo unique state để bảo mật
+    //         const state = this.generateRandomState();
 
-            // Lắng nghe message từ popup
-            const messageListener = (event: MessageEvent) => {
-                // Kiểm tra origin để bảo mật
-                if (event.origin !== window.location.origin) {
-                    return;
-                }
+    //         // Lắng nghe message từ popup
+    //         const messageListener = (event: MessageEvent) => {
+    //             // Kiểm tra origin để bảo mật
+    //             if (event.origin !== window.location.origin) {
+    //                 return;
+    //             }
 
-                if (event.data.type === 'OAUTH_SUCCESS') {
-                    window.removeEventListener('message', messageListener);
-                    popup.close();
-                    resolve({
-                        success: true,
-                        data: event.data.payload
-                    });
-                } else if (event.data.type === 'OAUTH_ERROR') {
-                    window.removeEventListener('message', messageListener);
-                    popup.close();
-                    resolve({
-                        success: false,
-                        error: event.data.error || 'Authentication failed'
-                    });
-                }
-            };
+    //             if (event.data.type === 'OAUTH_SUCCESS') {
+    //                 window.removeEventListener('message', messageListener);
+    //                 popup.close();
+    //                 resolve({
+    //                     success: true,
+    //                     data: event.data.payload
+    //                 });
+    //             } else if (event.data.type === 'OAUTH_ERROR') {
+    //                 window.removeEventListener('message', messageListener);
+    //                 popup.close();
+    //                 resolve({
+    //                     success: false,
+    //                     error: event.data.error || 'Authentication failed'
+    //                 });
+    //             }
+    //         };
 
-            window.addEventListener('message', messageListener);
+    //         window.addEventListener('message', messageListener);
 
-            // Kiểm tra popup có bị đóng không
-            const checkClosed = setInterval(() => {
-                if (popup.closed) {
-                    clearInterval(checkClosed);
-                    window.removeEventListener('message', messageListener);
-                    resolve({
-                        success: false,
-                        error: 'Authentication was cancelled'
-                    });
-                }
-            }, 1000);
+    //         // Kiểm tra popup có bị đóng không
+    //         const checkClosed = setInterval(() => {
+    //             if (popup.closed) {
+    //                 clearInterval(checkClosed);
+    //                 window.removeEventListener('message', messageListener);
+    //                 resolve({
+    //                     success: false,
+    //                     error: 'Authentication was cancelled'
+    //                 });
+    //             }
+    //         }, 1000);
 
-            // Timeout sau 5 phút
-            setTimeout(() => {
-                if (!popup.closed) {
-                    popup.close();
-                    window.removeEventListener('message', messageListener);
-                    clearInterval(checkClosed);
-                    resolve({
-                        success: false,
-                        error: 'Authentication timeout'
-                    });
-                }
-            }, 5 * 60 * 1000);
-        });
-    }
+    //         // Timeout sau 5 phút
+    //         setTimeout(() => {
+    //             if (!popup.closed) {
+    //                 popup.close();
+    //                 window.removeEventListener('message', messageListener);
+    //                 clearInterval(checkClosed);
+    //                 resolve({
+    //                     success: false,
+    //                     error: 'Authentication timeout'
+    //                 });
+    //             }
+    //         }, 5 * 60 * 1000);
+    //     });
+    // }
 
     /**
      * Tạo random state để bảo mật OAuth
@@ -142,36 +142,55 @@ class OAuthService {
                 return;
             }
 
+            let isResolved = false; // Flag để tránh resolve/reject nhiều lần
+
             const messageListener = (event: MessageEvent) => {
                 console.log('Received message from popup:', event.data);
                 console.log('Event origin:', event.origin);
+                console.log('Current window origin:', window.location.origin);
 
-                // Kiểm tra origin để bảo mật
+                // Kiểm tra origin linh hoạt hơn
                 const allowedOrigins = [
-                    window.location.origin,          
-                    'http://localhost:5000',         
-                    'http://localhost:3001',          
+                    window.location.origin,
+                    process.env.REACT_APP_CLIENT_URL || 'http://localhost:3000',
+                    process.env.REACT_APP_API_URL || 'http://localhost:5000',
+                    'http://localhost:3000',
+                    'http://localhost:5000'
                 ];
 
-                // Tạm thời bỏ check origin để test
-                // if (!allowedOrigins.includes(event.origin)) {
-                //     console.log('Origin not allowed:', event.origin);
-                //     return;
-                // }
+                // Log để debug origin
+                console.log('Allowed origins:', allowedOrigins);
+                console.log('Event origin matches allowed:', allowedOrigins.includes(event.origin));
+
+                // Tạm thời comment origin check để test
+                if (!allowedOrigins.includes(event.origin)) {
+                    console.warn('Blocked message from unauthorized origin:', event.origin);
+                    return;
+                }
+
+                if (isResolved) return; // Tránh xử lý nhiều lần
 
                 if (event.data.type === 'GOOGLE_AUTH_SUCCESS') {
+                    isResolved = true;
                     popup.close();
                     window.removeEventListener('message', messageListener);
                     clearInterval(checkClosed);
 
+                    // LƯU TOKEN VÀO LOCALSTORAGE
+                    if (event.data.payload) {
+                        localStorage.setItem('accessToken', event.data.payload.accessToken);
+                        localStorage.setItem('refreshToken', event.data.payload.refreshToken);
+                    }
+
                     resolve({
                         success: true,
                         data: {
-                            isNewUser: event.data.isNewUser,
+                            isNewUser: event.data.payload?.isNewUser,
                             state: event.data.state
                         }
                     });
                 } else if (event.data.type === 'GOOGLE_AUTH_ERROR') {
+                    isResolved = true;
                     popup.close();
                     window.removeEventListener('message', messageListener);
                     clearInterval(checkClosed);
@@ -183,7 +202,8 @@ class OAuthService {
             window.addEventListener('message', messageListener);
 
             const checkClosed = setInterval(() => {
-                if (popup.closed) {
+                if (popup.closed && !isResolved) {
+                    isResolved = true;
                     clearInterval(checkClosed);
                     window.removeEventListener('message', messageListener);
                     reject(new Error('Authentication was cancelled'));
@@ -191,13 +211,14 @@ class OAuthService {
             }, 500);
 
             setTimeout(() => {
-                if (!popup.closed) {
+                if (!popup.closed && !isResolved) {
+                    isResolved = true;
                     popup.close();
                     window.removeEventListener('message', messageListener);
                     clearInterval(checkClosed);
                     reject(new Error('Authentication timeout'));
                 }
-            }, 2 * 60 * 1000);
+            }, 5 * 60 * 1000);
         });
     }
 

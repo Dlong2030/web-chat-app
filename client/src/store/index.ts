@@ -3,31 +3,21 @@ import authReducer from './slices/authSlices';
 import socketReducer from './slices/socket/socketSlice';
 import { useDispatch, useSelector, TypedUseSelectorHook } from 'react-redux';
 import chatReducer from './slices/chat/chatSlice';
+import conversationReducer from './slices/chat/conversationSlice';
+import userReducer from './slices/chat/userSlice';
 
 export const store = configureStore({
     reducer: {
         auth: authReducer,
-        socket: socketReducer,
         chat: chatReducer,
+        conversations: conversationReducer,
+        users: userReducer,
+        socket: socketReducer,
     },
     middleware: (getDefaultMiddleware) =>
         getDefaultMiddleware({
             serializableCheck: {
-                ignoredActions: [
-                    'socket/setSocket'
-                ],
-                ignoredPaths: [
-                    'socket.socket',
-                    'socket.socket.receiveBuffer',
-                    'socket.socket.sendBuffer'
-                ],
-            },
-            immutableCheck: {
-                ignoredPaths: [
-                    'socket.socket',
-                    'socket.socket.receiveBuffer',
-                    'socket.socket.sendBuffer'
-                ]
+                
             }
         }),
 });

@@ -1,21 +1,29 @@
-// src/components/Dashboard.tsx
 import React, { useState } from 'react';
 import { Logo } from '../components/ui/Logo';
 import UserProfileDropdown from '../components/chat/UserProfileDropdown';
+import { useNavigate } from 'react-router-dom';
+import { useSelector } from 'react-redux';
+import { selectUser } from '../store/slices/authSlices';
 
 const Dashboard = () => {
+  const navigate = useNavigate();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
-  const [userData, setUserData] = useState({
-    name: 'Alex Johnson',
-    email: 'alex@example.com',
-    avatar: '/default-avatar.png',
-    status: 'Online'
-  });
+  const userData = useSelector(selectUser);
 
-  const handleProfileUpdate = (newData: { name: string; email: string }) => {
-    setUserData({ ...userData, ...newData });
-    setIsProfileOpen(false);
-  };
+  console.log('User data fetched successfully:', userData);
+
+  const handleOpenProfile = () => {
+    navigate(`${userData?.username}`)
+  }
+
+  const handleOpenChat = () => {
+    navigate('/chat');
+  }
+
+  // Toggle dropdown visibility
+  const handleToggleProfile = () => {
+    setIsProfileOpen(!isProfileOpen);
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-brand-100 to-sky-50 flex flex-col">
@@ -32,27 +40,26 @@ const Dashboard = () => {
         </div>
 
         <div className="relative text-center">
-          <a href=":username">
-            <button
-              onClick={() => setIsProfileOpen(!isProfileOpen)}
-              className="flex items-center space-x-2 focus:outline-none"
-            >
-              <div className="relative">
-                <div className="w-12 h-12 rounded-full bg-gradient-to-r from-brand-400 to-accent-500 flex items-center justify-center text-white">
-                  <span className="text-lg font-semibold">{userData.name.charAt(0)}</span>
-                </div>
-                <div className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white ${userData.status === 'Online' ? 'bg-green-500' : 'bg-gray-400'}`}></div>
+          <button
+            onClick={handleToggleProfile}
+            className="flex items-center space-x-2 focus:outline-none"
+          >
+            <div className="relative">
+              <div className="w-12 h-12 rounded-full bg-gradient-to-r from-brand-400 to-accent-500 flex items-center justify-center text-white">
+                <span className="text-lg font-semibold">{userData?.displayName.charAt(0) || "U"}</span>
               </div>
-            </button>
-          </a>
+              <div className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white ${userData?.status === 'online' ? 'bg-green-500' : 'bg-gray-400'}`}></div>
+            </div>
+          </button>
 
-          {isProfileOpen && (
+          {isProfileOpen && userData && (
             <UserProfileDropdown
               userData={userData}
-              onUpdate={handleProfileUpdate}
               onClose={() => setIsProfileOpen(false)}
+              onNavigateToProfile={handleOpenProfile}
             />
           )}
+
         </div>
       </header>
 
@@ -68,7 +75,7 @@ const Dashboard = () => {
 
           <button
             className="px-8 py-4 bg-gradient-to-r from-brand-400 to-accent-500 text-white text-xl font-semibold rounded-full shadow-lg hover:from-brand-500 hover:to-accent-600 transform hover:scale-105 transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-brand-300 animate-bounce-once"
-            onClick={() => window.location.href = '/chat'}
+            onClick={handleOpenChat}
           >
             Start Chatting Now
           </button>

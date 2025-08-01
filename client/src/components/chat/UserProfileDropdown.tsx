@@ -1,33 +1,42 @@
-// src/components/UserProfileDropdown.tsx
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 interface UserData {
-    name: string;
+    displayName: string;
     email: string;
-    avatar: string;
+    avatarUrl?: string;
     status: string;
 }
 
 interface UserProfileDropdownProps {
     userData: UserData;
-    onUpdate: (newData: { name: string; email: string }) => void;
     onClose: () => void;
+    onNavigateToProfile: () => void; // New prop for navigation
 }
 
 const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
     userData,
-    onUpdate,
-    onClose
+    onClose,
+    onNavigateToProfile
 }) => {
     const [isEditing, setIsEditing] = useState(false);
-    const [editName, setEditName] = useState(userData.name);
+    const [editName, setEditName] = useState(userData.displayName);
     const [editEmail, setEditEmail] = useState(userData.email);
-    const [status, setStatus] = useState(userData.status);
+    const navigate = useNavigate();
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        onUpdate({ name: editName, email: editEmail });
         setIsEditing(false);
+    };
+
+    const handleProfileClick = () => {
+        onNavigateToProfile();
+        onClose(); // Close dropdown after navigation
+    };
+
+    const handleOpenProfile = () => {
+        navigate(`/${userData.displayName}`);
+        onClose(); // Close dropdown after navigation
     };
 
     return (
@@ -35,16 +44,31 @@ const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
             <div className="p-4 border-b border-warm-100">
                 <div className="flex items-center space-x-3">
                     <div className="w-14 h-14 rounded-full bg-gradient-to-r from-brand-400 to-accent-500 flex items-center justify-center text-white">
-                        <span className="text-xl font-semibold">{userData.name.charAt(0)}</span>
+                        <span className="text-xl font-semibold">{userData.displayName.charAt(0)}</span>
                     </div>
-                    <div>
-                        <h3 className="font-bold text-warm-900">{userData.name}</h3>
+                    <div className="flex-1">
+                        <h3 className="font-bold text-warm-900">{userData.displayName}</h3>
                         <p className="text-sm text-warm-500">{userData.email}</p>
                     </div>
+                    {/* User Profile Icon */}
+                    <button
+                        onClick={handleProfileClick}
+                        className="p-2 rounded-full hover:bg-brand-50 transition-colors group"
+                        title="Go to profile"
+                    >
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            className="h-5 w-5 text-brand-600 group-hover:text-brand-700"
+                            viewBox="0 0 20 20"
+                            fill="currentColor"
+                        >
+                            <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+                        </svg>
+                    </button>
                 </div>
             </div>
 
-            <div className="p-4 border-b border-warm-100">
+            {/* <div className="p-4 border-b border-warm-100">
                 <div className="flex items-center justify-between mb-3">
                     <span className="text-warm-600">Status</span>
                     <div className="flex space-x-2">
@@ -68,7 +92,7 @@ const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
                         </button>
                     </div>
                 </div>
-            </div>
+            </div> */}
 
             {isEditing ? (
                 <form onSubmit={handleSubmit} className="p-4 border-b border-warm-100">
@@ -111,6 +135,7 @@ const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
             ) : (
                 <div className="p-4 border-b border-warm-100">
                     <button
+                        // onClick={() => setIsEditing(true)}
                         onClick={() => setIsEditing(true)}
                         className="w-full flex items-center justify-center space-x-2 py-2 px-4 text-brand-600 hover:bg-brand-50 rounded-lg transition-colors"
                     >
