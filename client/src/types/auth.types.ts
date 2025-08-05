@@ -45,7 +45,7 @@ export interface User {
   bio?: string;
   isActive: boolean;
   isVerified: boolean;
-  lastSeen?: Date;
+  lastSeen?: Date | String;
   status: 'online' | 'offline' | 'away' | 'busy';
   theme: 'light' | 'dark' | 'auto';
   language: string;

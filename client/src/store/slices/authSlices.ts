@@ -1,8 +1,7 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import AuthService from '../../services/authService';
-import OAuthService, { OAuthResponse } from '../../services/oauthService';
+import OAuthService from '../../services/oauthService';
 import { LoginRequest, LoginResponse, User } from '../../types/auth.types';
-import { log } from 'console';
 
 export interface AuthState {
     user: User | null;

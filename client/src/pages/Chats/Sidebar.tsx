@@ -50,8 +50,6 @@ const Sidebar: React.FC<SidebarProps> = ({
     // Sort conversations by last activity
     const sortedConversations = useMemo(() => {
         return [...filteredConversations].sort((a, b) => {
-            // Pinned conversations first (if you add pinned feature later)
-            // Then by last activity
             return new Date(b.lastActivity).getTime() - new Date(a.lastActivity).getTime();
         });
     }, [filteredConversations]);

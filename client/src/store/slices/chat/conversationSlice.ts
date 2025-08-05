@@ -1,5 +1,6 @@
-import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import { IConversation } from '../../../types/chat.types';
+import conversationService from '../../../services/conversationService';
 
 interface ConversationState {
     conversations: IConversation[];
@@ -13,13 +14,26 @@ const initialState: ConversationState = {
     error: null,
 };
 
+export const getUserConversations = createAsyncThunk<
+    IConversation[],
+    string,
+    { rejectValue: string }
+>(
+    'conversations/getUserConversations',
+    async (accessToken, { rejectWithValue }) => {
+        try {
+            const response = await conversationService.getUserConversations(accessToken);
+            return response;
+        } catch (error) {
+            return rejectWithValue('Failed to fetch user conversations');
+        }
+    }
+);
+
 const conversationSlice = createSlice({
     name: 'conversations',
     initialState,
     reducers: {
-        setConversations: (state, action: PayloadAction<IConversation[]>) => {
-            state.conversations = action.payload;
-        },
         addConversation: (state, action: PayloadAction<IConversation>) => {
             state.conversations.unshift(action.payload);
         },
@@ -31,8 +45,7 @@ const conversationSlice = createSlice({
             }
         },
         deleteConversation: (state, action: PayloadAction<string>) => {
-            const conversationId = action.payload;
-            state.conversations = state.conversations.filter(conv => conv._id !== conversationId);
+            state.conversations = state.conversations.filter(conv => conv._id !== action.payload);
         },
         addParticipant: (state, action: PayloadAction<{ conversationId: string; participant: any }>) => {
             const { conversationId, participant } = action.payload;
@@ -41,23 +54,29 @@ const conversationSlice = createSlice({
                 conversation.participants.push(participant);
             }
         },
-        setLoading: (state, action: PayloadAction<boolean>) => {
-            state.loading = action.payload;
-        },
-        setError: (state, action: PayloadAction<string | null>) => {
-            state.error = action.payload;
-        },
     },
+    extraReducers: (builder) => {
+        builder
+            .addCase(getUserConversations.pending, (state) => {
+                state.loading = true;
+                state.error = null;
+            })
+            .addCase(getUserConversations.fulfilled, (state, action) => {
+                state.loading = false;
+                state.conversations = action.payload;
+            })
+            .addCase(getUserConversations.rejected, (state, action) => {
+                state.loading = false;
+                state.error = action.payload || 'Something went wrong';
+            });
+    }
 });
 
 export const {
-    setConversations,
     addConversation,
     updateConversation,
     deleteConversation,
-    addParticipant,
-    setLoading,
-    setError,
+    addParticipant
 } = conversationSlice.actions;
 
 export default conversationSlice.reducer;

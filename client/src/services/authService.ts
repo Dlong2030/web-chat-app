@@ -1,45 +1,36 @@
-import { LoginRequest, LoginResponse, ApiError, User } from '../types/auth.types';
+import { LoginRequest, LoginResponse } from '../types/auth.types';
 import axios from 'axios';
+import axiosInstance from '../api/axios';
 
 class AuthService {
     private static baseURL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api/v1';
 
     static async login(loginData: LoginRequest): Promise<LoginResponse> {
         try {
-            const response = await fetch(`${this.baseURL}/auth/login`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(loginData),
-            });
+            const response = await axiosInstance.post(`${this.baseURL}/auth/login`, loginData);
+            const data: LoginResponse = response.data;
 
-            const data: LoginResponse | ApiError = await response.json();
-
-            if (!response.ok) {
-                // Xử lý các loại lỗi khác nhau
-                if (response.status === 400) {
-                    throw new Error(data.error || 'Validation failed');
-                } else if (response.status === 401) {
-                    throw new Error('Invalid credentials');
-                } else if (response.status === 403) {
-                    throw new Error('Account disabled');
-                } else {
-                    throw new Error(data.error || 'Login failed');
-                }
-            }
-
-            // Lưu tokens vào localStorage
             if (data.success && data.data) {
                 localStorage.setItem('accessToken', data.data.accessToken);
                 localStorage.setItem('refreshToken', data.data.refreshToken);
                 localStorage.setItem('user', JSON.stringify(data.data.user));
             }
 
-            return data as LoginResponse;
-        } catch (error) {
-            console.error('Login API error:', error);
-            throw error;
+            return data;
+        } catch (error: any) {
+            const status = error.response?.status;
+            const errData = error.response?.data;
+
+            switch (status) {
+                case 400:
+                    throw new Error(errData?.error || 'Validation failed');
+                case 401:
+                    throw new Error('Invalid credentials');
+                case 403:
+                    throw new Error('Account disabled');
+                default:
+                    throw new Error(errData?.error || 'Login failed');
+            }
         }
     }
 
