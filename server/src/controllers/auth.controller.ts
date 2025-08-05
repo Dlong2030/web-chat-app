@@ -8,10 +8,8 @@ import { User } from '../models';
 
 
 export class AuthController {
-    /**
-     * POST /auth/register
-     * Đăng ký tài khoản mới
-     */
+
+    //Đăng ký tài khoản mới
     static async register(req: Request, res: Response): Promise<void> {
         try {
             // Validation errors check
@@ -62,10 +60,9 @@ export class AuthController {
         }
     }
 
-    /**
-     * POST /auth/login
-     * Đăng nhập tài khoản
-     */
+
+     //Đăng nhập tài khoản
+     
     static async login(req: Request, res: Response): Promise<void> {
         try {
             // Validation errors check
@@ -116,10 +113,8 @@ export class AuthController {
         }
     }
 
-    /**
-     * POST /auth/refresh
-     * Làm mới access token
-     */
+
+    //Làm mới access token
     static async refreshToken(req: Request, res: Response): Promise<void> {
         try {
             const errors = validationResult(req);
@@ -155,14 +150,12 @@ export class AuthController {
         }
     }
 
-    /**
-     * POST /auth/logout
-     * Đăng xuất tài khoản
-     */
+
+    // Đăng xuất tài khoản
     static async logout(req: Request, res: Response): Promise<void> {
         try {
             const { deviceToken } = req.body;
-            const userId = (req as any).userId; // From auth middleware
+            const userId = (req as any).userId; // Từ auth middleware
 
             await AuthService.logoutUser(userId, deviceToken);
 
@@ -185,10 +178,7 @@ export class AuthController {
         }
     }
 
-    /**
-     * GET /auth/me
-     * Lấy thông tin user hiện tại
-     */
+    // Lấy thông tin user hiện tại
     static async getCurrentUser(req: Request, res: Response): Promise<void> {
         try {
             const user = (req as any).user;
@@ -215,11 +205,7 @@ export class AuthController {
     }
 
     // ===== OAUTH METHODS =====
-
-    /**
-     * GET /auth/google
-     * Redirect user đến Google OAuth
-     */
+    // Redirect user đến Google OAuth
     static initiateGoogleAuth = (req: Request, res: Response): void => {
         try {
             const state = req.query.state as string;
@@ -234,10 +220,7 @@ export class AuthController {
         }
     };
 
-    /**
-     * GET /auth/google/callback
-     * Xử lý callback từ Google OAuth
-     */
+     //Xử lý callback từ Google OAuth
     static handleGoogleCallback = async (req: Request, res: Response): Promise<void> => {
         try {
             const { code, error, state } = req.query;
@@ -356,10 +339,7 @@ export class AuthController {
         }
     };
 
-    /**
-     * GET /auth/facebook
-     * Redirect user đến Facebook OAuth
-     */
+    // Redirect user đến Facebook OAuth
     static initiateFacebookAuth = (req: Request, res: Response): void => {
         try {
             const state = req.query.state as string;
@@ -374,10 +354,7 @@ export class AuthController {
         }
     };
 
-    /**
-     * GET /auth/facebook/callback
-     * Xử lý callback từ Facebook OAuth
-     */
+    // Xử lý callback từ Facebook OAuth
     static handleFacebookCallback = async (req: Request, res: Response): Promise<void> => {
         try {
             const { code, error, state } = req.query;

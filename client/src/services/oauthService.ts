@@ -142,6 +142,13 @@ class OAuthService {
                 return;
             }
 
+            try {
+                popup.focus();
+            } catch (e) {
+                reject(new Error('Popup blocked. Please disable popup blocker and try again.'));
+                return;
+            }
+
             let isResolved = false; // Flag để tránh resolve/reject nhiều lần
 
             const messageListener = (event: MessageEvent) => {
@@ -202,6 +209,10 @@ class OAuthService {
             window.addEventListener('message', messageListener);
 
             const checkClosed = setInterval(() => {
+                console.log('Checking popup status:', {
+                    closed: popup.closed,
+                    isResolved: isResolved
+                });
                 if (popup.closed && !isResolved) {
                     isResolved = true;
                     clearInterval(checkClosed);

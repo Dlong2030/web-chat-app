@@ -7,7 +7,7 @@ export type OnlineStatus = 'online' | 'offline' | 'away' | 'busy';
 // Chat Item for Sidebar
 export interface IChatItem {
     conversation: IConversation;
-    otherParticipant?: User; // For direct chats
+    otherParticipant?: User; 
     unreadCount: number;
     lastActivity: Date;
     isOnline?: boolean;

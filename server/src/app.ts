@@ -6,12 +6,13 @@ import bodyParser from "body-parser";
 import morgan from "morgan";
 import cookieParser from "cookie-parser";
 import { healthCheck } from './config/database';
-import { authRoutes } from './routes/auth.routes';
 import session from 'express-session';
 import passport from 'passport';
 import { swaggerSpec } from './config/swagger';
 import swaggerUi from 'swagger-ui-express';
 import logger from './utils/logger';
+import { authRoutes } from './routes/auth.routes';
+import { conversationRoutes } from './routes/conversation.routes';
 
 const app = express();
 
@@ -47,6 +48,7 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // Routes
 app.use('/api/v1/auth', authRoutes);
+app.use('/api/v1/conversations', conversationRoutes);
 
 app.get('/', (req: Request, res: Response) => {
     res.send('Hello from Express + TypeScript!');
