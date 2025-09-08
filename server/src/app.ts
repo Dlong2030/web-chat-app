@@ -13,6 +13,7 @@ import swaggerUi from 'swagger-ui-express';
 import logger from './utils/logger';
 import { authRoutes } from './routes/auth.routes';
 import { conversationRoutes } from './routes/conversation.routes';
+import { userRoutes } from './routes/user.routes';
 
 const app = express();
 
@@ -49,6 +50,7 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 // Routes
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/conversations', conversationRoutes);
+app.use('/api/v1/users', userRoutes);
 
 app.get('/', (req: Request, res: Response) => {
     res.send('Hello from Express + TypeScript!');

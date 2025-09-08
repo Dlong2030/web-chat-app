@@ -1,31 +1,30 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
-import { IConversation } from '../../../types/chat.types';
+import { ConversationResponse } from '../../../types/chat.types';
 import conversationService from '../../../services/conversationService';
 
 interface ConversationState {
-    conversations: IConversation[];
+    chatItems: ConversationResponse[];
     loading: boolean;
     error: string | null;
 }
 
 const initialState: ConversationState = {
-    conversations: [],
+    chatItems: [], // Tên đúng là chatItems
     loading: false,
     error: null,
 };
 
 export const getUserConversations = createAsyncThunk<
-    IConversation[],
+    ConversationResponse[],
     string,
     { rejectValue: string }
 >(
     'conversations/getUserConversations',
     async (accessToken, { rejectWithValue }) => {
         try {
-            const response = await conversationService.getUserConversations(accessToken);
-            return response;
-        } catch (error) {
-            return rejectWithValue('Failed to fetch user conversations');
+            return await conversationService.getUserConversations(accessToken);
+        } catch (error: any) {
+            return rejectWithValue(error.message);
         }
     }
 );
@@ -34,24 +33,24 @@ const conversationSlice = createSlice({
     name: 'conversations',
     initialState,
     reducers: {
-        addConversation: (state, action: PayloadAction<IConversation>) => {
-            state.conversations.unshift(action.payload);
+        addConversation: (state, action: PayloadAction<ConversationResponse>) => {
+            state.chatItems.unshift(action.payload); 
         },
-        updateConversation: (state, action: PayloadAction<{ id: string; updates: Partial<IConversation> }>) => {
+        updateConversation: (state, action: PayloadAction<{ id: string; updates: Partial<ConversationResponse> }>) => {
             const { id, updates } = action.payload;
-            const index = state.conversations.findIndex(conv => conv._id === id);
+            const index = state.chatItems.findIndex(conv => conv.conversation._id === id); 
             if (index !== -1) {
-                state.conversations[index] = { ...state.conversations[index], ...updates };
+                state.chatItems[index] = { ...state.chatItems[index], ...updates }; 
             }
         },
         deleteConversation: (state, action: PayloadAction<string>) => {
-            state.conversations = state.conversations.filter(conv => conv._id !== action.payload);
+            state.chatItems = state.chatItems.filter(conv => conv.conversation._id !== action.payload); 
         },
         addParticipant: (state, action: PayloadAction<{ conversationId: string; participant: any }>) => {
             const { conversationId, participant } = action.payload;
-            const conversation = state.conversations.find(conv => conv._id === conversationId);
+            const conversation = state.chatItems.find(conv => conv.conversation._id === conversationId); 
             if (conversation) {
-                conversation.participants.push(participant);
+                conversation.conversation.participants.push(participant); 
             }
         },
     },
@@ -63,11 +62,12 @@ const conversationSlice = createSlice({
             })
             .addCase(getUserConversations.fulfilled, (state, action) => {
                 state.loading = false;
-                state.conversations = action.payload;
+                state.chatItems = action.payload;
             })
             .addCase(getUserConversations.rejected, (state, action) => {
                 state.loading = false;
-                state.error = action.payload || 'Something went wrong';
+                state.error = action.payload || 'Failed to load conversations';
+                state.chatItems = [];
             });
     }
 });

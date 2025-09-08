@@ -5,7 +5,7 @@ import { addMessage, markMessageAsRead, addReaction, deleteMessage, setTyping } 
 import { addConversation, deleteConversation, addParticipant } from '../store/slices/chat/conversationSlice';
 import { updateUserStatus } from '../store/slices/chat/userSlice';
 import { logoutAsync } from '../store/slices/authSlices';
-import { IMessage, IConversation } from '../types/chat.types';
+import { IMessage, IConversation, ConversationResponse   } from '../types/chat.types';
 
 class SocketService {
     private socket: Socket | null = null;
@@ -116,7 +116,7 @@ class SocketService {
         });
 
         // Conversation events
-        this.socket.on('conversation_created', (conversation: IConversation) => {
+        this.socket.on('conversation_created', (conversation: ConversationResponse) => {
             store.dispatch(addConversation(conversation));
         });
 
@@ -128,7 +128,7 @@ class SocketService {
             store.dispatch(addParticipant(data));
         });
 
-        this.socket.on('added_to_conversation', (conversation: IConversation) => {
+        this.socket.on('added_to_conversation', (conversation: ConversationResponse) => {
             store.dispatch(addConversation(conversation));
         });
 

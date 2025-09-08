@@ -1,3 +1,5 @@
+import { User} from './auth.types';
+
 export interface IMessage {
     _id: string;
     conversationId: string;
@@ -40,10 +42,23 @@ export interface IConversation {
     isActive: boolean;
     createdAt: Date;
     updatedAt: Date;
+    avatar?: string;
+}
+
+export interface ConversationResponse {
+    conversation: IConversation;  
+    otherParticipant?: User;      
+    unreadCount: number;          
+    lastActivity: string;         
+    isOnline: boolean;            
+    isTyping: boolean;            
 }
 
 export interface IParticipant {
     userId: string;
     role: 'admin' | 'member';
     joinedAt: Date;
+    user?: User
+    displayName?: string; 
+    avatarUrl?: string; 
 }

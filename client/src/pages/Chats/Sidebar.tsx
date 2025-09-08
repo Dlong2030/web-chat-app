@@ -54,6 +54,8 @@ const Sidebar: React.FC<SidebarProps> = ({
         });
     }, [filteredConversations]);
 
+    console.log('Filtered and sorted conversations:', sortedConversations);
+
     return (
         <div className="h-full w-80 bg-gradient-soft border-r border-warm-200 flex flex-col backdrop-blur-sm">
             {/* Header Section */}
@@ -62,7 +64,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                 <SearchBar
                     value={localSearchQuery}
                     onChange={handleSearch}
-                    placeholder="Tìm kiếm cuộc trò chuyện..."
+                    placeholder="Search conversations..."
                 />
             </div>
 

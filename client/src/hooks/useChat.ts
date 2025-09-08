@@ -6,7 +6,7 @@ import { socketService } from '../services/socketService';
 export const useChat = () => {
     const dispatch = useDispatch();
     const chat = useSelector((state: RootState) => state.chat);
-    const conversations = useSelector((state: RootState) => state.conversations);
+    const conversations = useSelector((state: RootState) => state);
     const users = useSelector((state: RootState) => state.users);
 
     const sendMessage = (data: {

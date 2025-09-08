@@ -24,6 +24,8 @@ const ChatList: React.FC<ChatListProps> = ({
         );
     }
 
+    console.log('items', items.map(item => item));
+
     return (
         <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-warm-300 scrollbar-track-transparent">
             <div className="space-y-2 p-2">

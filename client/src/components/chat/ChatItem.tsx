@@ -9,6 +9,9 @@ const ChatItem: React.FC<ChatItemProps> = ({
 }) => {
     const { conversation, otherParticipant, unreadCount, lastActivity, isOnline, isTyping } = item;
 
+    console.log('item', otherParticipant);
+    
+
     // Get display name and avatar
     const displayName = conversation.type === 'group'
         ? conversation.name || 'Nhóm chat'
